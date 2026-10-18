@@ -133,7 +133,7 @@ jobs:
           $glide = [IO.File]::ReadAllBytes("glide3x.dll")
           $hay = [Text.Encoding]::Latin1.GetString($glide)
           $needle = [Text.Encoding]::Latin1.GetString($lzma)
-          if ($hay.IndexOf($needle) -lt 0) { throw "the authorized sgd2freeres .lzma is not embedded in glide3x.dll" }
+          if ($hay.IndexOf($needle, [StringComparison]::Ordinal) -lt 0) { throw "the authorized sgd2freeres .lzma is not embedded in glide3x.dll" }
           Write-Host "glide3x.dll sha256=$((Get-FileHash 'glide3x.dll' -Algorithm SHA256).Hash.ToLower()) size=$((Get-Item glide3x.dll).Length)"
           # Toolchain guard: must be a v142 linker output, never v143/14.44.
           $gb = [IO.File]::ReadAllBytes("glide3x.dll")
