@@ -1,0 +1,90 @@
+name: build-d2dx
+
+# Builds the LATAM-authorized glide3x.dll: D2DX with our own SGD2FreeRes build
+# (fork MarcosT96/SlashGaming-Diablo-II-Free-Resolution, branch
+# d2-latam-allowlist) embedded as the sgd2freeres resource.
+#
+# The fork's D2DX source is otherwise untouched (a fork of bolrog/d2dx,
+# GPL-3.0). The only differences from the stock shipping 0.99.529 build are the
+# embedded resolution DLL and the toolchain.
+#
+# Self-contained: it clones and builds the resolution mod from public source,
+# repacks it into PocketLzma's .lzma container and replaces
+# thirdparty/sgd2freeres/sgd2freeres.dll.lzma before building glide3x.dll.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Label for this build
+        required: false
+        default: d2-latam
+
+permissions:
+  contents: read
+
+jobs:
+  glide3x:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout D2DX source
+        uses: actions/checkout@v4
+
+      - name: Checkout SGD2FreeRes source (with fix + gateway allowlist)
+        run: |
+          git clone --depth 1 --branch d2-latam-allowlist https://github.com/MarcosT96/SlashGaming-Diablo-II-Free-Resolution.git free-res
+          git -C free-res submodule update --init --recursive
+
+      - name: Install CMake 3.28
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Install NASM
+        uses: ilammy/setup-nasm@v1
+
+      - name: Build SGD2FreeRes.dll
+        run: |
+          cmake -S free-res -B free-res/build -G "Visual Studio 17 2022" -A Win32
+          cmake --build free-res/build --config Release
+
+      - name: Repack the DLL into PocketLzma's .lzma container
+        shell: pwsh
+        run: |
+          $py = @'
+          import lzma, struct, sys
+          src, dst = sys.argv[1], sys.argv[2]
+          data = open(src, "rb").read()
+          alone = bytearray(lzma.compress(data, format=lzma.FORMAT_ALONE))
+          alone[5:13] = struct.pack("<Q", len(data))
+          assert lzma.decompress(bytes(alone), format=lzma.FORMAT_ALONE) == data
+          open(dst, "wb").write(alone)
+          print("packed", dst, len(alone))
+          '@
+          Set-Content -Path pack.py -Value $py -Encoding ascii
+          python pack.py "free-res/build/Release/SGD2FreeRes.dll" "thirdparty/sgd2freeres/sgd2freeres.dll.lzma"
+          Write-Host "dll sha256=$((Get-FileHash 'free-res/build/Release/SGD2FreeRes.dll' -Algorithm SHA256).Hash.ToLower())"
+
+      - name: Install MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build glide3x.dll
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "C:\games\Diablo II" | Out-Null
+          msbuild src/d2dx/d2dx.vcxproj /m /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v143
+
+      - name: Stage and hash glide3x.dll
+        shell: pwsh
+        run: |
+          $dll = Get-ChildItem -Recurse -Filter glide3x.dll . | Where-Object { $_.FullName -notlike "*free-res*" } | Select-Object -First 1
+          if (-not $dll) { throw "glide3x.dll not found" }
+          Copy-Item $dll.FullName glide3x.dll -Force
+          Write-Host "glide3x.dll sha256=$((Get-FileHash 'glide3x.dll' -Algorithm SHA256).Hash.ToLower()) size=$((Get-Item glide3x.dll).Length)"
+
+      - name: Upload glide3x.dll
+        uses: actions/upload-artifact@v4
+        with:
+          name: glide3x
+          path: glide3x.dll
+          retention-days: 30
