@@ -48,21 +48,16 @@ jobs:
           cmake -S free-res -B free-res/build -G "Visual Studio 17 2022" -A Win32
           cmake --build free-res/build --config Release
 
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Repack the DLL into PocketLzma's .lzma container
         shell: pwsh
         run: |
-          $py = @'
-          import lzma, struct, sys
-          src, dst = sys.argv[1], sys.argv[2]
-          data = open(src, "rb").read()
-          alone = bytearray(lzma.compress(data, format=lzma.FORMAT_ALONE))
-          alone[5:13] = struct.pack("<Q", len(data))
-          assert lzma.decompress(bytes(alone), format=lzma.FORMAT_ALONE) == data
-          open(dst, "wb").write(alone)
-          print("packed", dst, len(alone))
-          '@
-          Set-Content -Path pack.py -Value $py -Encoding ascii
-          python pack.py "free-res/build/Release/SGD2FreeRes.dll" "thirdparty/sgd2freeres/sgd2freeres.dll.lzma"
+          cl /nologo /std:c++17 /EHsc /O2 /I thirdparty/pocketlzma tools/pack_lzma.cpp /Fe:pack_lzma.exe /Fo:pack_lzma.obj
+          if ($LASTEXITCODE -ne 0) { throw "pack_lzma build failed" }
+          .\pack_lzma.exe "free-res/build/Release/SGD2FreeRes.dll" "thirdparty/sgd2freeres/sgd2freeres.dll.lzma"
+          if ($LASTEXITCODE -ne 0) { throw "pack_lzma failed" }
           Write-Host "dll sha256=$((Get-FileHash 'free-res/build/Release/SGD2FreeRes.dll' -Algorithm SHA256).Hash.ToLower())"
 
       - name: Install MSBuild
