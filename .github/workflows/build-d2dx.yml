@@ -2,7 +2,8 @@ name: build-d2dx
 
 # Builds the LATAM-authorized glide3x.dll: D2DX with our own SGD2FreeRes build
 # (fork MarcosT96/SlashGaming-Diablo-II-Free-Resolution, branch
-# d2-latam-allowlist) embedded as the sgd2freeres resource.
+# d2-latam-release-3.0.4.0, i.e. the RELEASE master == 3.0.4.0 line, NOT
+# develop) embedded as the sgd2freeres resource.
 #
 # The fork's D2DX source is otherwise untouched (a fork of bolrog/d2dx,
 # GPL-3.0). The only differences from the stock shipping 0.99.529 build are the
@@ -30,10 +31,36 @@ jobs:
       - name: Checkout D2DX source
         uses: actions/checkout@v4
 
-      - name: Checkout SGD2FreeRes source (with fix + gateway allowlist)
+      - name: Checkout SGD2FreeRes source (release 3.0.4.0 + fixes)
         run: |
-          git clone --depth 1 --branch d2-latam-allowlist https://github.com/MarcosT96/SlashGaming-Diablo-II-Free-Resolution.git free-res
+          git clone --depth 1 --branch d2-latam-release-3.0.4.0 https://github.com/MarcosT96/SlashGaming-Diablo-II-Free-Resolution.git free-res
           git -C free-res submodule update --init --recursive
+
+      - name: Verify the three required fixes are present
+        shell: pwsh
+        run: |
+          $errs = @()
+          # 1. The gateway allowlist entry for sv.d2latam.com.
+          $gres = "free-res/SlashGaming-Diablo-II-Free-Resolution/src/helper/game_resolution.cc"
+          if (-not (Select-String -Path $gres -Pattern 'DE946264EB3B0B2A34D04F6D15C8524CD68E2FA5' -Quiet)) {
+            $errs += "gateway allowlist entry missing from $gres"
+          }
+          # 2. The .def export list is wired into the build.
+          $cmake = Get-Content "free-res/CMakeLists.txt" -Raw
+          if ($cmake -notmatch 'sgd2fml_mod_exports\.def') { $errs += "sgd2fml_mod_exports.def is not in CMakeLists.txt" }
+          if (-not (Test-Path "free-res/SlashGaming-Diablo-II-Free-Resolution/resource/sgd2fml_mod_exports.def")) {
+            $errs += "sgd2fml_mod_exports.def is missing"
+          }
+          # 3. The SGD2MAPI static-destruction fix (immortal statics).
+          $api = "free-res/external/SlashGaming-Diablo-II-API/SlashGaming-Diablo-II-API/src/cxx"
+          if (-not (Select-String -Path "$api/game_executable.cc" -Pattern 'new ::std::wstring' -Quiet)) {
+            $errs += "game_executable::GetPath is not immortal"
+          }
+          if (-not (Select-String -Path "$api/backend/game_library.cc" -Pattern 'new std::map' -Quiet)) {
+            $errs += "GameLibrary::GetLibrariesByPaths is not immortal"
+          }
+          if ($errs.Count -gt 0) { $errs | ForEach-Object { Write-Host "::error::$_" }; throw "required fixes missing" }
+          Write-Host "all three required fixes are present"
 
       - name: Install CMake 3.28
         uses: jwlawson/actions-setup-cmake@v2
@@ -54,11 +81,20 @@ jobs:
       - name: Repack the DLL into PocketLzma's .lzma container
         shell: pwsh
         run: |
+          # Fail loudly if the mod entry points are not exported: the whole
+          # point of the .def fix is that loaders can resolve them by name.
+          $src = "free-res/build/Release/SGD2FreeRes.dll"
+          if (-not (Test-Path $src)) { throw "SGD2FreeRes.dll not found at $src" }
+          $bytes = [IO.File]::ReadAllBytes($src)
+          $ascii = -join ($bytes | ForEach-Object { if ($_ -ge 32 -and $_ -lt 127) { [char]$_ } else { "`0" } })
+          foreach ($name in @("Sgd2fml_Mod_OnLoadMpqs","Sgd2fml_Mod_OnUnloadMpqs","Sgd2fml_Mod_ReloadConfig","Sgd2fml_Mod_GetMinRequiredApiVersion")) {
+            if ($ascii -notmatch [regex]::Escape($name)) { throw "missing export: $name" }
+          }
           cl /nologo /std:c++17 /EHsc /O2 /I thirdparty/pocketlzma tools/pack_lzma.cpp /Fe:pack_lzma.exe /Fo:pack_lzma.obj
           if ($LASTEXITCODE -ne 0) { throw "pack_lzma build failed" }
-          .\pack_lzma.exe "free-res/build/Release/SGD2FreeRes.dll" "thirdparty/sgd2freeres/sgd2freeres.dll.lzma"
+          .\pack_lzma.exe $src "thirdparty/sgd2freeres/sgd2freeres.dll.lzma"
           if ($LASTEXITCODE -ne 0) { throw "pack_lzma failed" }
-          Write-Host "dll sha256=$((Get-FileHash 'free-res/build/Release/SGD2FreeRes.dll' -Algorithm SHA256).Hash.ToLower())"
+          Write-Host "dll sha256=$((Get-FileHash $src -Algorithm SHA256).Hash.ToLower())"
 
       - name: Install MSBuild
         uses: microsoft/setup-msbuild@v2
@@ -75,6 +111,13 @@ jobs:
           $dll = Get-ChildItem -Recurse -Filter glide3x.dll . | Where-Object { $_.FullName -notlike "*free-res*" } | Select-Object -First 1
           if (-not $dll) { throw "glide3x.dll not found" }
           Copy-Item $dll.FullName glide3x.dll -Force
+          # The resource must carry exactly the .lzma we just packed; otherwise
+          # the running D2DX would rewrite the wrong resolution DLL.
+          $lzma = [IO.File]::ReadAllBytes("thirdparty/sgd2freeres/sgd2freeres.dll.lzma")
+          $glide = [IO.File]::ReadAllBytes("glide3x.dll")
+          $hay = [Text.Encoding]::Latin1.GetString($glide)
+          $needle = [Text.Encoding]::Latin1.GetString($lzma)
+          if ($hay.IndexOf($needle) -lt 0) { throw "the authorized sgd2freeres .lzma is not embedded in glide3x.dll" }
           Write-Host "glide3x.dll sha256=$((Get-FileHash 'glide3x.dll' -Algorithm SHA256).Hash.ToLower()) size=$((Get-Item glide3x.dll).Length)"
 
       - name: Upload glide3x.dll
