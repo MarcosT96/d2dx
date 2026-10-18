@@ -9,6 +9,15 @@ name: build-d2dx
 # GPL-3.0). The only differences from the stock shipping 0.99.529 build are the
 # embedded resolution DLL and the toolchain.
 #
+# Toolchain: the stock 0.99.529 binaries were built with the VS 2019 / v142
+# toolset (linker 14.28) and work; every v143 build (linker 14.44) of ours
+# crashed the game at startup. The `windows-2019` hosted runner was retired on
+# 2025-06-30, so we run on `windows-2022` (which still ships the v142 build
+# tools) and force the toolset: `-T v142` for CMake and
+# `/p:PlatformToolset=v142` for MSBuild (the project file already asks for
+# v142; the CI was overriding it to v143). Guards below fail the build unless
+# the artifacts are v142 linker output.
+#
 # Self-contained: it clones and builds the resolution mod from public source,
 # repacks it into PocketLzma's .lzma container and replaces
 # thirdparty/sgd2freeres/sgd2freeres.dll.lzma before building glide3x.dll.
@@ -72,7 +81,7 @@ jobs:
 
       - name: Build SGD2FreeRes.dll
         run: |
-          cmake -S free-res -B free-res/build -G "Visual Studio 17 2022" -A Win32
+          cmake -S free-res -B free-res/build -G "Visual Studio 17 2022" -A Win32 -T v142
           cmake --build free-res/build --config Release
 
       - name: Set up MSVC
@@ -95,6 +104,13 @@ jobs:
           .\pack_lzma.exe $src "thirdparty/sgd2freeres/sgd2freeres.dll.lzma"
           if ($LASTEXITCODE -ne 0) { throw "pack_lzma failed" }
           Write-Host "dll sha256=$((Get-FileHash $src -Algorithm SHA256).Hash.ToLower())"
+          # Toolchain guard: must be a v142 linker output, never v143/14.44.
+          $b = [IO.File]::ReadAllBytes($src)
+          $pe = [BitConverter]::ToInt32($b, 0x3C)
+          $major = $b[$pe + 24 + 2]
+          $minor = $b[$pe + 24 + 3]
+          Write-Host "dll linker=$major.$minor"
+          if ($major -eq 14 -and $minor -ge 30) { throw "wrong toolset: linker $major.$minor is not v142 (expected 14.2x)" }
 
       - name: Install MSBuild
         uses: microsoft/setup-msbuild@v2
@@ -103,7 +119,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path "C:\games\Diablo II" | Out-Null
-          msbuild src/d2dx/d2dx.vcxproj /m /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v143
+          msbuild src/d2dx/d2dx.vcxproj /m /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v142
 
       - name: Stage and hash glide3x.dll
         shell: pwsh
@@ -119,6 +135,13 @@ jobs:
           $needle = [Text.Encoding]::Latin1.GetString($lzma)
           if ($hay.IndexOf($needle) -lt 0) { throw "the authorized sgd2freeres .lzma is not embedded in glide3x.dll" }
           Write-Host "glide3x.dll sha256=$((Get-FileHash 'glide3x.dll' -Algorithm SHA256).Hash.ToLower()) size=$((Get-Item glide3x.dll).Length)"
+          # Toolchain guard: must be a v142 linker output, never v143/14.44.
+          $gb = [IO.File]::ReadAllBytes("glide3x.dll")
+          $gpe = [BitConverter]::ToInt32($gb, 0x3C)
+          $gmajor = $gb[$gpe + 24 + 2]
+          $gminor = $gb[$gpe + 24 + 3]
+          Write-Host "glide3x.dll linker=$gmajor.$gminor"
+          if ($gmajor -eq 14 -and $gminor -ge 30) { throw "wrong toolset: linker $gmajor.$gminor is not v142 (expected 14.2x)" }
 
       - name: Upload glide3x.dll
         uses: actions/upload-artifact@v4
