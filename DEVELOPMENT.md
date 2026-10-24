@@ -14,11 +14,12 @@ Research basis: a survey of upstream's forks, open PRs and issues on 2026-10-24.
 | Run CodeQL on Windows with a manual MSBuild step | fork#7 | 2026-10-24 |
 | Skip the Windows build/tests for docs-only changes; `Tests` workflow only on pushes to `main` | fork#9 | 2026-10-24 |
 | Release process: `version.h` as the single version source; release-please + build/test/publish `d2dx.zip` | fork#11, fork#12 | 2026-10-24 |
+| First release `0.0.1` (`d2dx.zip`; played on 1.14d under Wine/Proton, no problems) | fork#15 | 2026-10-24 |
 
 ## In progress (this fork)
 | Item | Where | Status |
 |---|---|---|
-| First release `0.0.1` (prerelease until someone has played it in-game; then the Lutris installer can use `d2dx.zip`) | release PR | pending |
+| Skip CI on the release-please PR (the release job tests the tagged commit); first real use is the next release PR | fork#16 | open |
 | Dependabot for GitHub Actions | fork#3 | open |
 | This tracker | fork#8 | open |
 
@@ -37,6 +38,7 @@ Source is mostly Jarcho's split-out upstream PRs. Port them one at a time, each 
 ## Backlog (unscheduled)
 | Item | Source | Notes |
 |---|---|---|
+| Test the released DLL on the other supported game versions (1.09d, 1.10f, 1.12, 1.13c, 1.13d) and on native Windows, and record the results | this fork | `0.0.1` was only played on 1.14d under Wine. Windows 7/8.1 are also untested with the v143 build. |
 | Nearest-neighbour / pixel-exact upscaling | Jarcho fork (not in a PR) | #181. Would be lifted from the fork. |
 | Float window scale (`scale=1.25`) | PR #133 | In our tree nothing outside `Options.cpp/.h` reads `GetWindowScale()`, so the parsed value may be unused. Find the consumer first. Unverified: whether `toml_double_in` rejects integer literals like `scale=2`. |
 | Other cursor/window/input fixes (mouse wheel, focus loss, window position, compat-mode detection) | Jarcho fork | #127, #96, #123, #50, #108, #158, #163, #152. Cherry-pick as small commits after the planned items. |
