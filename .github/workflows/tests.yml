@@ -4,7 +4,10 @@ name: Tests
 # Microsoft CppUnitTest. (tests/linux/run.sh is a faster, partial local check.)
 
 on:
+  # Pushes to PR branches are covered by the pull_request run, so only run on push for main
+  # (otherwise every PR commit runs twice). Branches without a PR get no CI until one is opened.
   push:
+    branches: [ main ]
   pull_request:
 
 jobs:

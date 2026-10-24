@@ -29,7 +29,7 @@ Two paths, same test sources (`src/d2dxtests`):
    - It is 32-bit (`-m32`) because `D2Types.h` static-asserts Win32 struct sizes.
    - If a test needs a new Windows symbol, extend the shim rather than editing production code.
    - It tests logic only, not MSVC behaviour. A pass here is not a pass on Windows.
-2. **Windows CI (authoritative):** `.github/workflows/tests.yml` builds the test project and the DLL on `windows-latest` and runs `vstest.console`. It runs on every push and PR, but the Windows job is skipped when a change touches only docs (`*.md`, licences, `screenshots/`, `dependabot.yml`); a cheap `changes` job decides, and the skipped job still satisfies the required `build-and-test` check. Anything else, including `tests/linux/known-failures.txt` and the workflow itself, runs the full build. Check it with `gh run list` / `gh run view --log-failed` once `gh` is authenticated, and get it green before merging.
+2. **Windows CI (authoritative):** `.github/workflows/tests.yml` builds the test project and the DLL on `windows-latest` and runs `vstest.console`. It runs on PRs and on pushes to `main` (not on every branch push, so open a PR to get CI), but the Windows job is skipped when a change touches only docs (`*.md`, licences, `screenshots/`, `dependabot.yml`); a cheap `changes` job decides, and the skipped job still satisfies the required `build-and-test` check. Anything else, including `tests/linux/known-failures.txt` and the workflow itself, runs the full build. Check it with `gh run list` / `gh run view --log-failed` once `gh` is authenticated, and get it green before merging.
 
 Rendering, Detours hooks and anything touching a live game or D3D device can't be covered by either; they need a manual run on Windows.
 
