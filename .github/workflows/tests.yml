@@ -8,7 +8,68 @@ on:
   pull_request:
 
 jobs:
+  # `build-and-test` is a required check on main, so the workflow must always run and report it.
+  # A trigger-level `paths-ignore` would leave the check pending forever on docs-only PRs.
+  # Instead this cheap job decides, and a job skipped by `if:` counts as passing for required checks.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect non-documentation changes
+        id: filter
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.sha }}
+        run: |
+          # Anything not listed here counts as code (including this workflow and
+          # tests/linux/known-failures.txt, which the test step reads).
+          docs_only() {
+            case "$1" in
+              *.md | LICENSE.txt | toml-LICENSE.txt | screenshots/* | .github/dependabot.yml) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+
+          if [ "$EVENT" = pull_request ]; then
+            range="$PR_BASE...$PR_HEAD"
+          elif [ "$EVENT" = push ] && [ "$PUSH_BEFORE" != 0000000000000000000000000000000000000000 ]; then
+            range="$PUSH_BEFORE..$PUSH_AFTER"
+          else
+            echo "Can't tell what changed ($EVENT); running everything."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if ! files=$(git diff --name-only "$range"); then
+            echo "git diff failed for $range; running everything."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          code=false
+          while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            if ! docs_only "$f"; then
+              echo "code change: $f"
+              code=true
+            fi
+          done <<< "$files"
+
+          echo "range: $range, code=$code"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
   build-and-test:
+    needs: changes
+    # Run when code changed, and also if the detection job itself failed (fail safe).
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
     runs-on: windows-latest
     # A normal run takes ~2 minutes; a failed assert() in a Debug test can hang the headless runner.
     timeout-minutes: 15
