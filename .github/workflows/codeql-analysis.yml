@@ -14,9 +14,13 @@ name: "CodeQL"
 on:
   push:
     branches: [ main ]
+    # Docs-only changes can't affect the analysis. (Not a required check, so a trigger-level filter is safe.)
+    paths-ignore: [ '**.md', 'LICENSE.txt', 'toml-LICENSE.txt', 'screenshots/**' ]
   pull_request:
     # The branches below must be a subset of the branches above
     branches: [ main ]
+    # Docs-only changes can't affect the analysis. (Not a required check, so a trigger-level filter is safe.)
+    paths-ignore: [ '**.md', 'LICENSE.txt', 'toml-LICENSE.txt', 'screenshots/**' ]
   schedule:
     - cron: '44 20 * * 3'
 
