@@ -62,16 +62,26 @@ namespace d2dxtests
 			Assert::AreEqual(Size(1436, 720), suggestedGameSize);
 		}
 
-		void AssertThatGameSizeIsIntegerScale(Size desktopSize, bool wide, bool lenient)
+		void AssertThatGameSizeIsIntegerScale(Size desktopSize, bool wide, bool lenient, bool keepAspect = true)
 		{
 			auto suggestedGameSize = d2dx::Metrics::GetSuggestedGameSize(desktopSize, wide);
-			auto renderRect = d2dx::Metrics::GetRenderRect(suggestedGameSize, desktopSize, wide);
+			auto renderRect = d2dx::Metrics::GetRenderRect(suggestedGameSize, desktopSize, keepAspect);
 			Assert::IsTrue(renderRect.offset.x >= 0);
 			Assert::IsTrue(renderRect.offset.y >= 0);
 			Assert::IsTrue(renderRect.size.width > 0);
 			Assert::IsTrue(renderRect.size.height > 0);
 			Assert::IsTrue((renderRect.offset.x + renderRect.size.width) <= desktopSize.width);
 			Assert::IsTrue((renderRect.offset.y + renderRect.size.height) <= desktopSize.height);
+
+			if (!keepAspect)
+			{
+				/* Not keeping the aspect ratio means stretching to the whole desktop. */
+				Assert::AreEqual(0, renderRect.offset.x);
+				Assert::AreEqual(0, renderRect.offset.y);
+				Assert::AreEqual(desktopSize.width, renderRect.size.width);
+				Assert::AreEqual(desktopSize.height, renderRect.size.height);
+				return;
+			}
 
 			if (renderRect.offset.x > 0 && renderRect.offset.y > 0)
 			{
@@ -103,6 +113,8 @@ namespace d2dxtests
 			{
 				AssertThatGameSizeIsIntegerScale(standardDesktopSizes.items[i], false, false);
 				AssertThatGameSizeIsIntegerScale(standardDesktopSizes.items[i], true, false);
+				AssertThatGameSizeIsIntegerScale(standardDesktopSizes.items[i], false, false, false);
+				AssertThatGameSizeIsIntegerScale(standardDesktopSizes.items[i], true, false, false);
 			}
 		}
 
@@ -112,11 +124,15 @@ namespace d2dxtests
 			{
 				AssertThatGameSizeIsIntegerScale({ width, 503 }, false, true);
 				AssertThatGameSizeIsIntegerScale({ width, 503 }, true, true);
+				AssertThatGameSizeIsIntegerScale({ width, 503 }, false, true, false);
+				AssertThatGameSizeIsIntegerScale({ width, 503 }, true, true, false);
 			}
 			for (int32_t height = 50; height < 1600; ++height)
 			{
 				AssertThatGameSizeIsIntegerScale({ 614, height }, false, true);
 				AssertThatGameSizeIsIntegerScale({ 614, height }, true, true);
+				AssertThatGameSizeIsIntegerScale({ 614, height }, false, true, false);
+				AssertThatGameSizeIsIntegerScale({ 614, height }, true, true, false);
 			}
 		}
 	};

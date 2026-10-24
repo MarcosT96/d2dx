@@ -36,6 +36,7 @@ All default to `false`. Setting one to `true` turns the matching D2DX behaviour 
 | `nocompatmodefix` | Don't block Windows XP compatibility mode. Needed under Wine/Proton: Wine reports Windows 6.2 to one API and 10.0 to another, which D2DX would otherwise take for compatibility mode. (This is from a report of a 1.14d run under Proton, not from reading the Wine source.) |
 | `notitlechange` | Don't change the window title. |
 | `nomotionprediction` | Don't run the game graphics at high FPS. |
+| `nokeepaspectratio` | Don't keep the aspect ratio when scaling the game to the screen: stretch it to fill the whole window or screen. By default the aspect ratio is kept, with black bars where needed, and cutscenes are scaled to the full screen width. |
 
 ### `[debug]`
 | Key | Default | Meaning |
@@ -48,7 +49,7 @@ Options are matched anywhere in the command line. Besides the game's own `-3dfx`
 
 | Option | Same as |
 |---|---|
-| `-dxnoclipcursor`, `-dxnofpsfix`, `-dxnoresmod`, `-dxnowide`, `-dxnologo`, `-dxnovsync`, `-dxnoaa`, `-dxnocompatmodefix`, `-dxnotitlechange` | the `[optouts]` key of the same name, set to `true` |
+| `-dxnoclipcursor`, `-dxnofpsfix`, `-dxnoresmod`, `-dxnowide`, `-dxnologo`, `-dxnovsync`, `-dxnoaa`, `-dxnocompatmodefix`, `-dxnotitlechange`, `-dxnokeepaspectratio` | the `[optouts]` key of the same name, set to `true` |
 | `-dxnomop` | `nomotionprediction = true` |
 | `-dxscale2`, `-dxscale3` | `[window] scale = 2` or `3` |
 | `-dxdbg_dump_textures` | `[debug] dumptextures = true` |

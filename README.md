@@ -58,7 +58,7 @@ Many of the default settings of D2DX can be changed. To use a configuration file
   Check [DEVELOPMENT.md](https://github.com/jackrayner/d2dx/blob/main/DEVELOPMENT.md) to see whether it is a known or planned item, then [open an issue](https://github.com/jackrayner/d2dx/issues) and include `d2dx_log.txt` from your Diablo II folder, your game version and your OS.
 
 ## Credits
-D2DX was written by bolrog, with patches from Xenthalon. This fork is maintained by Jack Rayner.
+D2DX was written by bolrog, with patches from Xenthalon and Jason Newcomb (Jarcho). This fork is maintained by Jack Rayner.
 
 D2DX embeds and uses the following third-party code:
 - SGD2FreeRes (the resolution mod) by Mir Drualga, licensed under Affero GPL v3.
