@@ -4,7 +4,6 @@
   "include-v-in-tag": false,
   "bump-minor-pre-major": true,
   "bump-patch-for-minor-pre-major": true,
-  "prerelease": true,
   "bootstrap-sha": "a462e08efe039306d19115ba1f36ad287d76f679",
   "packages": {
     ".": {
