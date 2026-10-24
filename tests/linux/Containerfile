@@ -1,0 +1,9 @@
+# Toolchain image for the portable (non-Windows) d2dx unit tests. Source is bind-mounted, not copied.
+FROM docker.io/library/debian:trixie-slim
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends clang g++-multilib cmake ninja-build \
+ && rm -rf /var/lib/apt/lists/*
+# d2dx is a 32-bit (x86) program and static_asserts struct sizes, so build -m32.
+# clang is used because the tests rely on MSVC-style extensions it accepts.
+ENV CC=clang CXX=clang++
+WORKDIR /src
