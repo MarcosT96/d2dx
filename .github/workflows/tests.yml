@@ -44,6 +44,8 @@ jobs:
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
           PUSH_BEFORE: ${{ github.event.before }}
           PUSH_AFTER: ${{ github.sha }}
+          # Only the real release-please PR: its branch, opened by the bot, from this repo (not a fork).
+          IS_RELEASE_PR: ${{ github.event_name == 'pull_request' && github.head_ref == 'release-please--branches--main' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login == 'github-actions[bot]' }}
         run: |
           # Anything not listed here counts as code (including this workflow and
           # tests/linux/known-failures.txt, which the test step reads).
@@ -53,6 +55,14 @@ jobs:
               *) return 1 ;;
             esac
           }
+
+          # The release PR only bumps versions and the changelog, and the release workflow rebuilds
+          # and tests the tagged commit after it merges, so skip the Windows job here.
+          if [ "$IS_RELEASE_PR" = true ]; then
+            echo "release-please PR: skipping the build (the release job tests the tagged commit)."
+            echo "code=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           if [ "$EVENT" = pull_request ]; then
             range="$PR_BASE...$PR_HEAD"

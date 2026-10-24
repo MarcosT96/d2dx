@@ -27,6 +27,8 @@ on:
 jobs:
   analyze:
     name: Analyze
+    # Not worth a Windows build on release-please's version-bump PR (same match as tests.yml).
+    if: ${{ !(github.event_name == 'pull_request' && github.head_ref == 'release-please--branches--main' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login == 'github-actions[bot]') }}
     # Windows: this is an MSVC project, and CodeQL's C++ autobuild only works there.
     runs-on: windows-latest
     permissions:
