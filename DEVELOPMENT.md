@@ -11,11 +11,12 @@ Research basis: a survey of upstream's forks, open PRs and issues on 2026-10-24.
 | Windows CI + containerised Linux/macOS unit-test runner | fork#2 | 2026-10-24 |
 | `AGENTS.md` / `CLAUDE.md` agent guidance | fork#1 | 2026-10-24 |
 | Fix `GetRenderRect` out-of-bounds rects (both `TestMetrics` known failures now pass) | fork#4 | 2026-10-24 |
+| Run CodeQL on Windows with a manual MSBuild step | fork#7 | 2026-10-24 |
+| Skip the Windows build/tests for docs-only changes; `Tests` workflow only on pushes to `main` | fork#9 | 2026-10-24 |
 
 ## In progress (this fork)
 | Item | Where | Status |
 |---|---|---|
-| Run CodeQL on Windows with a manual MSBuild step | fork#7 | open |
 | Dependabot for GitHub Actions | fork#3 | open |
 | This tracker | fork#8 | open |
 
