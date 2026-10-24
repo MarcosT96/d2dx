@@ -18,7 +18,9 @@ Research basis: a survey of upstream's forks, open PRs and issues on 2026-10-24.
 | Dependabot for GitHub Actions | fork#3 | 2026-10-24 |
 | This tracker, plus attribution guidance | fork#8 | 2026-10-24 |
 | README made the fork's own; upstream changelog moved to `docs/upstream-changelog.md`; status badges; release no longer forced to prerelease | fork#18 | 2026-10-24 |
-| Repo housekeeping: Issues enabled, merged and scratch branches deleted, dead links removed (the imgur video is gone) | this PR | 2026-10-24 |
+| Repo housekeeping: Issues enabled, merged and scratch branches deleted, dead links removed (the imgur video is gone); licence header on `version.h`; neutral copyright wording ("The D2DX contributors") recorded in `AGENTS.md` | fork#19 | 2026-10-24 |
+| `docs/configuration.md`, `docs/compatibility.md` (per-version table with what has been tested), `CONTRIBUTING.md`; README credits cut back to plain credits | fork#20 | 2026-10-24 |
+| Repo settings: fork description, topics, squash merges use PR title + body | settings | 2026-10-24 |
 
 ## In progress (this fork)
 | Item | Where | Status |
