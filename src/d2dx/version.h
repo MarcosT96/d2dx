@@ -1,7 +1,7 @@
 /*
 	This file is part of D2DX.
 
-	Copyright (C) 2026  Jack Rayner
+	Copyright (C) 2026  The D2DX contributors
 
 	D2DX is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by

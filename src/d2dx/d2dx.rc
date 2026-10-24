@@ -73,7 +73,7 @@ BEGIN
             VALUE "FileDescription", "Glide wrapper for D2"
             VALUE "FileVersion", D2DX_VERSION_STR
             VALUE "InternalName", "d2dx.dll"
-            VALUE "LegalCopyright", "Copyright (C) 2021 Bolrog. Fork modifications Copyright (C) 2026 Jack Rayner"
+            VALUE "LegalCopyright", "Copyright (C) 2021 Bolrog and contributors"
             VALUE "OriginalFilename", "d2dx.dll"
             VALUE "ProductName", "D2DX"
             VALUE "ProductVersion", D2DX_VERSION_STR
