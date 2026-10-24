@@ -61,7 +61,8 @@ Many of the default settings of D2DX can be changed. To use a configuration file
 D2DX was written by bolrog, with patches from Xenthalon. This fork is maintained by Jack Rayner.
 
 D2DX embeds and uses the following third-party code:
-- SGD2FreeRes (the resolution mod) by Mir Drualga, licensed under Affero GPL v3.
+- SGD2FreeRes 3.0.3.1 (the resolution mod) by Mir Drualga, licensed under Affero GPL v3. This is the official release from [mir-diablo-ii-tools/SlashGaming-Diablo-II-Free-Resolution](https://github.com/mir-diablo-ii-tools/SlashGaming-Diablo-II-Free-Resolution).
+- RapidJSON by THL A29 Limited, a Tencent company, and Milo Yip, used by SGD2FreeRes and licensed under the MIT License (the licence file also covers some third-party components of RapidJSON).
 - Detours by Microsoft.
 - FNV1a hash reference implementation, which is in the public domain.
 - FXAA implementation by Timothy Lottes. (This software contains source code provided by NVIDIA Corporation.)
