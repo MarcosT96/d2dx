@@ -8,7 +8,7 @@
 D2DX is a Glide-wrapper and mod that makes the classic Diablo II/LoD run well on modern PCs, while honoring the original look and feel of the game.
 Play in a window or in fullscreen, glitch-free, with or without enhancements like widescreen, true high framerate and anti-aliasing.
 
-Version 0.0.1 <!-- x-release-please-version -->
+Version 0.0.2 <!-- x-release-please-version -->
 
 This is a maintained fork of [bolrog/d2dx](https://github.com/bolrog/d2dx), which has not been updated since July 2021. It is not intended to be merged back upstream. Planned and declined work is tracked in [DEVELOPMENT.md](https://github.com/jackrayner/d2dx/blob/main/DEVELOPMENT.md).
 
