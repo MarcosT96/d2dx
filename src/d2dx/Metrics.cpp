@@ -207,21 +207,19 @@ Rect d2dx::Metrics::GetRenderRect(
 	   rescale the image with a non-integer factor. */
 	if (rect.offset.x < 0 || rect.offset.y < 0 || (rect.offset.x >= 16 && rect.offset.y >= 16))
 	{
-		float scaleFactorF = (float)desktopSize.width / rect.size.width;
-		int32_t scaledHeight = (int32_t)(rect.size.height * scaleFactorF);
-		rect.offset.x = 0;
-		rect.offset.y = (desktopSize.height - scaledHeight) / 2;
-		rect.size.width = desktopSize.width;
-		rect.size.height = scaledHeight;
+		/* Fit to the desktop width, or to the height if that would be too tall. Both are
+		   computed from the game size (not from each other) so truncation doesn't compound,
+		   and the overflow test compares sizes because a 1px overflow gives a zero offset. */
+		const int32_t scaledHeight = desktopSize.width * gameSize.height / gameSize.width;
 
-		if (rect.offset.x < 0 || rect.offset.y < 0)
+		if (scaledHeight <= desktopSize.height)
 		{
-			float scaleFactorF = (float)desktopSize.height / rect.size.height;
-			int32_t scaledWidth = (int32_t)(rect.size.width * scaleFactorF);
-			rect.offset.x = (desktopSize.width - scaledWidth) / 2;
-			rect.offset.y = 0;
-			rect.size.width = scaledWidth;
-			rect.size.height = desktopSize.height;
+			rect = Rect{ 0, (desktopSize.height - scaledHeight) / 2, desktopSize.width, scaledHeight };
+		}
+		else
+		{
+			const int32_t scaledWidth = desktopSize.height * gameSize.width / gameSize.height;
+			rect = Rect{ (desktopSize.width - scaledWidth) / 2, 0, scaledWidth, desktopSize.height };
 		}
 	}
 

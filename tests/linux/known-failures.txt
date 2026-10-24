@@ -1,0 +1,2 @@
+# Tests that already fail on upstream bolrog/d2dx main (d95d19a). They are reported as
+# [KNOWN] and don't fail the run. Remove an entry when the underlying bug is fixed.

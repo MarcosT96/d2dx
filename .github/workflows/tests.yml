@@ -1,0 +1,110 @@
+name: Tests
+
+# Windows is the authoritative build: the project is MSVC/Win32 and the tests use
+# Microsoft CppUnitTest. (tests/linux/run.sh is a faster, partial local check.)
+
+on:
+  # Pushes to PR branches are covered by the pull_request run, so only run on push for main
+  # (otherwise every PR commit runs twice). Branches without a PR get no CI until one is opened.
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  # `build-and-test` is a required check on main, so the workflow must always run and report it.
+  # A trigger-level `paths-ignore` would leave the check pending forever on docs-only PRs.
+  # Instead this cheap job decides, and a job skipped by `if:` counts as passing for required checks.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect non-documentation changes
+        id: filter
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.sha }}
+        run: |
+          # Anything not listed here counts as code (including this workflow and
+          # tests/linux/known-failures.txt, which the test step reads).
+          docs_only() {
+            case "$1" in
+              *.md | LICENSE.txt | toml-LICENSE.txt | screenshots/* | .github/dependabot.yml) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+
+          if [ "$EVENT" = pull_request ]; then
+            range="$PR_BASE...$PR_HEAD"
+          elif [ "$EVENT" = push ] && [ "$PUSH_BEFORE" != 0000000000000000000000000000000000000000 ]; then
+            range="$PUSH_BEFORE..$PUSH_AFTER"
+          else
+            echo "Can't tell what changed ($EVENT); running everything."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if ! files=$(git diff --name-only "$range"); then
+            echo "git diff failed for $range; running everything."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          code=false
+          while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            if ! docs_only "$f"; then
+              echo "code change: $f"
+              code=true
+            fi
+          done <<< "$files"
+
+          echo "range: $range, code=$code"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+  build-and-test:
+    needs: changes
+    # Run when code changed, and also if the detection job itself failed (fail safe).
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
+    runs-on: windows-latest
+    # A normal run takes ~2 minutes; a failed assert() in a Debug test can hang the headless runner.
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: microsoft/setup-msbuild@v2
+
+      # The projects target v142 (VS2019); the runner has VS2022, so retarget to v143.
+      - name: Build unit tests
+        run: msbuild src/d2dxtests/d2dxtests.vcxproj /m /p:Configuration=Debug /p:Platform=Win32 /p:PlatformToolset=v143
+
+      # Gate the DLL build too. The post-build step copies to the author's game folder, so skip it.
+      - name: Build d2dx.dll
+        run: msbuild src/d2dx/d2dx.vcxproj /m /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v143 /p:PostBuildEventUseInBuild=false
+
+      - name: Run unit tests
+        shell: pwsh
+        run: |
+          $vstest = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -find '**\vstest.console.exe' | Select-Object -First 1
+          $dll = Get-ChildItem -Recurse -Filter d2dxtests.dll -Path src | Select-Object -First 1
+          if (-not $vstest -or -not $dll) { throw "vstest.console.exe or d2dxtests.dll not found" }
+
+          # Same list the Linux runner uses; these fail on upstream main (see the file).
+          $known = Get-Content tests/linux/known-failures.txt | ForEach-Object { ($_ -replace '#.*', '').Trim() } | Where-Object { $_ }
+          $args = @($dll.FullName, '/Platform:x86', '/Logger:trx', '/Logger:console;verbosity=normal')
+          if ($known) { $args += '/TestCaseFilter:' + (($known | ForEach-Object { "Name!=$_" }) -join '&') }
+          & $vstest @args
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: "**/TestResults/*.trx"
