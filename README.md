@@ -1,5 +1,10 @@
 # D2DX
 
+[![Latest release](https://img.shields.io/github/v/release/jackrayner/d2dx)](https://github.com/jackrayner/d2dx/releases/latest)
+[![Tests](https://github.com/jackrayner/d2dx/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/jackrayner/d2dx/actions/workflows/tests.yml)
+[![CodeQL](https://github.com/jackrayner/d2dx/actions/workflows/codeql-analysis.yml/badge.svg?branch=main)](https://github.com/jackrayner/d2dx/actions/workflows/codeql-analysis.yml)
+[![License: GPL v3](https://img.shields.io/github/license/jackrayner/d2dx)](https://github.com/jackrayner/d2dx/blob/main/LICENSE.txt)
+
 D2DX is a Glide-wrapper and mod that makes the classic Diablo II/LoD run well on modern PCs, while honoring the original look and feel of the game.
 Play in a window or in fullscreen, glitch-free, with or without enhancements like widescreen, true high framerate and anti-aliasing.
 
