@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.0.3](https://github.com/jackrayner/d2dx/compare/0.0.2...0.0.3) (2026-10-24)
+
+
+### Features
+
+* Add `nokeepaspectratio` option ([b58d523](https://github.com/jackrayner/d2dx/commit/b58d523e38de4f3cbfba1266dba9e2088bca3521))
+* use the full screen width for cutscenes and add nokeepaspectratio ([3038284](https://github.com/jackrayner/d2dx/commit/3038284c3e3714571327a68f05c350d0aa875ce8))
+
+
+### Bug Fixes
+
+* make the embedded SGD2FreeRes read D2DX's config file ([428df08](https://github.com/jackrayner/d2dx/commit/428df082acec09e1c5efce668cd5a3206bb1e560))
+* update the embedded SGD2FreeRes to 3.0.3.1 (extended tile culling) ([4bb1089](https://github.com/jackrayner/d2dx/commit/4bb1089f5991f97f4f084a34f56cc944c27c8ce3))
+* Use full screen size for cinematics ([6be5f67](https://github.com/jackrayner/d2dx/commit/6be5f67ca00b9ce9d62dd8fe6628ad7a08ce3ae3))
+
 ## [0.0.2](https://github.com/jackrayner/d2dx/compare/0.0.1...0.0.2) (2026-10-24)
 
 
