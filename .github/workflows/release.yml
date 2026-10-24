@@ -67,6 +67,7 @@ jobs:
           cp README.md d2dx-defaults.cfg stage/
           cp LICENSE.txt toml-LICENSE.txt stage/licenses/
           cp "thirdparty/sgd2freeres/SGD2FreeRes - COPYING" "thirdparty/sgd2freeres/SGD2FreeRes - LICENSE.md" "thirdparty/sgd2freeres/rapidjson - license.txt" stage/licenses/
+          cp "thirdparty/sgd2freeres/MODIFICATIONS.md" "stage/licenses/SGD2FreeRes - D2DX modifications.md"
           cp thirdparty/pocketlzma/pocketlzma-LICENSE.txt stage/licenses/
           cat > stage/SOURCE.txt <<EOF
           D2DX $TAG
