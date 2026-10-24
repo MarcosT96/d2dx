@@ -8,6 +8,7 @@
 // Generated from the TEXTINCLUDE 2 resource.
 //
 #include "winres.h"
+#include "version.h"
 
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
@@ -33,6 +34,7 @@ END
 2 TEXTINCLUDE 
 BEGIN
     "#include ""winres.h""\r\n"
+    "#include ""version.h""\r\n"
     "\0"
 END
 
@@ -51,8 +53,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,99,330,0
- PRODUCTVERSION 0,99,330,0
+ FILEVERSION D2DX_VERSION_MAJOR,D2DX_VERSION_MINOR,D2DX_VERSION_PATCH,0
+ PRODUCTVERSION D2DX_VERSION_MAJOR,D2DX_VERSION_MINOR,D2DX_VERSION_PATCH,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -69,12 +71,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Bolrog"
             VALUE "FileDescription", "Glide wrapper for D2"
-            VALUE "FileVersion", "0.99.529.0"
+            VALUE "FileVersion", D2DX_VERSION_STR
             VALUE "InternalName", "d2dx.dll"
             VALUE "LegalCopyright", "Copyright (C) 2021"
             VALUE "OriginalFilename", "d2dx.dll"
             VALUE "ProductName", "D2DX"
-            VALUE "ProductVersion", "0.99.529.0"
+            VALUE "ProductVersion", D2DX_VERSION_STR
         END
     END
     BLOCK "VarFileInfo"
