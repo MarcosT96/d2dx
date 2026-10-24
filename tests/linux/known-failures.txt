@@ -1,10 +1,2 @@
 # Tests that already fail on upstream bolrog/d2dx main (d95d19a). They are reported as
 # [KNOWN] and don't fail the run. Remove an entry when the underlying bug is fixed.
-
-# GetRenderRect leaves a 1px remainder for 3200x2048 (integer division in the
-# non-integer rescale path), so the strict width check sees 3199.
-TestRenderRectsAreGoodForStandardDesktopSizes
-
-# GetRenderRect can produce a rect 1px taller than the desktop (e.g. 614x761 -> 614x762)
-# via float rounding, which also trips assert() in Debug builds.
-TestRenderRectsAreGoodForNonStandardDesktopSizes
