@@ -76,6 +76,7 @@ Support is implemented by hardcoded addresses, so adding or fixing a version mea
 Also supported/detected: Project Diablo 2 (logged in `GameHelper`); its suggested resolution has special handling.
 
 ## Working conventions
+- **Tracker:** `DEVELOPMENT.md` lists planned work, the backlog, and what we've decided not to do (with reasons). Check it before starting a feature and update it in the same PR that changes an item's status.
 
 - Follow the global rules in `~/.claude/CLAUDE.md`: no commits or pushes unless asked; confirm before destructive or outward-facing actions.
 - Don't edit `thirdparty/` except to deliberately update a dependency. It holds vendored binaries (`detours.lib`, `SGD2FreeRes.*`) and licensed code.
@@ -88,3 +89,14 @@ Also supported/detected: Project Diablo 2 (logged in `GameHelper`); its suggeste
 
 - The version lives in `README.md` and `src/d2dx/d2dx.rc`. In the `.rc`, the numeric `FILEVERSION`/`PRODUCTVERSION` are stale (`0,99,330,0`, already so at the 0.99.529 tag) while the string values say `0.99.529.0`. These describe the last release, not `main`. Update all of them together when bumping.
 - Fork goals are not documented yet. Add them here once decided.
+
+## Licensing and attribution
+
+This is GPLv3-or-later (`LICENSE.txt`; source headers say "any later version"), and upstream forks and PRs are GPLv3 too, so porting their code is allowed. This is the working practice, not legal advice:
+- **Keep authorship.** Port with `git cherry-pick -x <sha>` or `git am` so the original author and upstream commit stay in history. If you re-implement by hand, add a `Co-authored-by:` trailer and name the source PR/commit in the message.
+- **Keep headers.** Never strip copyright/licence headers. New files from others keep their authors' notices. Don't present others' code as ours.
+- **Credit in the README.** Add contributors whose work we ship to the README "Credits" section, and list any new third-party library there (for example xxHash, BSD-2-Clause) with its licence file kept under `thirdparty/<lib>/`.
+- **Mark modifications.** GPLv3 §5(a) asks for a notice that the work was modified, with a date. Keep git history intact, and keep a short changelog or "Changes from upstream" note when a release is cut.
+- **Binaries need source.** Anyone we hand a built DLL must be able to get the corresponding source (§6). Don't ship a pre-built binary from another fork (notably Jarcho's custom `SGD2FreeRes.dll`, AGPLv3) unless its source and licence are confirmed.
+- **Don't ping other people's threads.** In commit messages, PR descriptions and comments, never write a bare `#N` for an upstream issue/PR (in this fork GitHub resolves it to the upstream repo), nor `owner/repo#N` or a URL to someone else's issue or PR: each one posts a visible "mentioned in" entry on their thread, and it can't be removed afterwards. Write it as plain text instead ("upstream PR 188"). Files like `DEVELOPMENT.md` don't create references, so numbers are fine there.
+- Only reuse code from forks that carry a licence file. All forks reviewed so far do.
