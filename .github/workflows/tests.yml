@@ -1,0 +1,44 @@
+name: Tests
+
+# Windows is the authoritative build: the project is MSVC/Win32 and the tests use
+# Microsoft CppUnitTest. (tests/linux/run.sh is a faster, partial local check.)
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: microsoft/setup-msbuild@v2
+
+      # The projects target v142 (VS2019); the runner has VS2022, so retarget to v143.
+      - name: Build unit tests
+        run: msbuild src/d2dxtests/d2dxtests.vcxproj /m /p:Configuration=Debug /p:Platform=Win32 /p:PlatformToolset=v143
+
+      # Gate the DLL build too. The post-build step copies to the author's game folder, so skip it.
+      - name: Build d2dx.dll
+        run: msbuild src/d2dx/d2dx.vcxproj /m /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v143 /p:PostBuildEventUseInBuild=false
+
+      - name: Run unit tests
+        shell: pwsh
+        run: |
+          $vstest = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -find '**\vstest.console.exe' | Select-Object -First 1
+          $dll = Get-ChildItem -Recurse -Filter d2dxtests.dll -Path src | Select-Object -First 1
+          if (-not $vstest -or -not $dll) { throw "vstest.console.exe or d2dxtests.dll not found" }
+
+          # Same list the Linux runner uses; these fail on upstream main (see the file).
+          $known = Get-Content tests/linux/known-failures.txt | ForEach-Object { ($_ -replace '#.*', '').Trim() } | Where-Object { $_ }
+          $args = @($dll.FullName, '/Platform:x86', '/Logger:trx', '/Logger:console;verbosity=normal')
+          if ($known) { $args += '/TestCaseFilter:' + (($known | ForEach-Object { "Name!=$_" }) -join '&') }
+          & $vstest @args
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: "**/TestResults/*.trx"
