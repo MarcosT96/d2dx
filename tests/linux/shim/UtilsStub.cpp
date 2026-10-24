@@ -12,9 +12,14 @@ int64_t d2dx::TimeStart()
 	return std::chrono::steady_clock::now().time_since_epoch().count();
 }
 
-float d2dx::TimeEndMs(int64_t start)
+int64_t d2dx::TimeEnd(int64_t start)
 {
-	return (float)((TimeStart() - start) / 1e6);
+	return TimeStart() - start;
+}
+
+double d2dx::TimeToMs(int64_t time)
+{
+	return (double)time / 1e6; // steady_clock ticks are nanoseconds
 }
 
 char* d2dx::detail::GetMessageForHRESULT(HRESULT, const char*, int32_t) noexcept
