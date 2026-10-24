@@ -90,13 +90,13 @@ Also supported/detected: Project Diablo 2 (logged in `GameHelper`); its suggeste
 
 Releases are automated by release-please (`release-please-config.json`, `.release-please-manifest.json`, `.github/workflows/release.yml`), the same pattern as `jackrayner/ha-pypowerwall`. Tags have no `v` and start at `0.0.1`.
 - On every push to `main`, release-please opens or updates a release PR from the conventional commits since the last release. Review its changelog and edit the notes there (the first release's notes should say what it is based on and that it was only unit-tested, not played).
-- Merging that PR tags and creates the GitHub release (flagged prerelease until someone has run the DLL in-game), then the same workflow builds the tagged commit, runs the checks and unit tests (`tests.yml`, called with `force`), and attaches `d2dx.zip`. The zip has the same layout as upstream's: `glide3x.dll` at the top level, `README.md`, `d2dx-defaults.cfg`, `licenses/`, plus `SOURCE.txt`. The notes get the zip's SHA-256 appended.
+- Merging that PR tags and creates the GitHub release, then the same workflow builds the tagged commit, runs the checks and unit tests (`tests.yml`, called with `force`), and attaches `d2dx.zip`. The zip has the same layout as upstream's: `glide3x.dll` at the top level, `README.md`, `d2dx-defaults.cfg`, `licenses/`, plus `SOURCE.txt`. The notes get the zip's SHA-256 appended.
 - **Never replace a published asset.** Downstream installers pin the checksum. A fix means a new release and tag.
 - To force a version or release with no `feat`/`fix` commits, push a commit to `main` with a `Release-As: X.Y.Z` footer.
 - **The version lives in `src/d2dx/version.h`**, which release-please rewrites (do not edit by hand; keep the `x-release-please-*` markers). `d2dx.rc` and the README version line derive from it. Visual Studio can rewrite `d2dx.rc`; keep the `#include "version.h"` in its `TEXTINCLUDE 2` block.
 - **CI is skipped on the release PR** (branch `release-please--branches--main`, opened by the bot from this repo): `tests.yml`'s `changes` job reports nothing to build and CodeQL is skipped, so the required `build-and-test` check still passes. The release workflow builds and tests the tagged commit after merge (including a check that the DLL's file version matches `version.h`), so a bad bump would show up there, after the tag exists. If you want a pre-merge check, run `tests.yml` on the release branch by hand.
 - CI also fails if the DLL starts importing the Visual C++/UCRT runtime (the README promises no redistributable install), and uploads the built DLL as the `glide3x-dll` artifact on each run for manual in-game testing.
-- What CI can't tell you: whether the DLL works in the game. Run it in a Diablo II folder (`-3dfx`) before removing the prerelease flag.
+- Releases are published as normal releases. CI can't tell you whether the DLL works in the game, so say in the release notes what was and wasn't played (the first one was played on 1.14d under Wine only), and mark a release as a prerelease by hand if nobody has run it.
 
 ## Open questions / not yet verified
 
