@@ -54,28 +54,21 @@ Many of the default settings of D2DX can be changed. To use a configuration file
 ### I get a message box saying "Diablo II is unable to proceed. Unsupported graphics mode."
   You are running the download version of Diablo II from blizzard.com. It can be modified to work with D2DX, but this fork does not document how yet.
 
-### It's ugly/slow/buggy.
+### Something looks wrong or runs badly
   Check [DEVELOPMENT.md](https://github.com/jackrayner/d2dx/blob/main/DEVELOPMENT.md) to see whether it is a known or planned item, then [open an issue](https://github.com/jackrayner/d2dx/issues) and include `d2dx_log.txt` from your Diablo II folder, your game version and your OS.
 
 ## Credits
-Original author: bolrog
-Patch contributions: Xenthalon
-Fork maintenance: Jack Rayner
+D2DX was written by bolrog, with patches from Xenthalon. This fork is maintained by Jack Rayner.
 
-The research of many people in the Diablo II community over twenty years made this project possible.
-
-Thanks to Mir Drualga for making the fantastic SGD2FreeRes mod!
-Thanks also to everyone who contributes bug reports.
-
-D2DX uses the following third party libraries:
-- FNV1a hash reference implementation, which is in the public domain.
+D2DX embeds and uses the following third-party code:
+- SGD2FreeRes (the resolution mod) by Mir Drualga, licensed under Affero GPL v3.
 - Detours by Microsoft.
-- SGD2FreeRes by Mir Drualga, licensed under Affero GPL v3.
+- FNV1a hash reference implementation, which is in the public domain.
 - FXAA implementation by Timothy Lottes. (This software contains source code provided by NVIDIA Corporation.)
-- stb_image by Sean Barrett
-- pocketlzma by Robin Berg Pettersen
-- tomlc99 by CK Tan, MIT licensed.
 - 9-tap Catmull-Rom texture filtering by TheRealMJP.
+- stb_image by Sean Barrett.
+- pocketlzma by Robin Berg Pettersen.
+- tomlc99 by CK Tan, MIT licensed.
 
 ## Release history
 This fork's releases are in [CHANGELOG.md](https://github.com/jackrayner/d2dx/blob/main/CHANGELOG.md). The original project's history up to 0.99.529 is in [docs/upstream-changelog.md](https://github.com/jackrayner/d2dx/blob/main/docs/upstream-changelog.md).
