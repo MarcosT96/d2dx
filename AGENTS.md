@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Guidance for AI coding agents (and humans) working in this repo. `CLAUDE.md` just imports this file.
+Guidance for AI coding agents (and humans) working in this repo. `CLAUDE.md` just imports this file. Human contributors: see `CONTRIBUTING.md`.
 
 ## What this is
 
