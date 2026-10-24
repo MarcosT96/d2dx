@@ -14,16 +14,21 @@ name: "CodeQL"
 on:
   push:
     branches: [ main ]
+    # Docs-only changes can't affect the analysis. (Not a required check, so a trigger-level filter is safe.)
+    paths-ignore: [ '**.md', 'LICENSE.txt', 'toml-LICENSE.txt', 'screenshots/**' ]
   pull_request:
     # The branches below must be a subset of the branches above
     branches: [ main ]
+    # Docs-only changes can't affect the analysis. (Not a required check, so a trigger-level filter is safe.)
+    paths-ignore: [ '**.md', 'LICENSE.txt', 'toml-LICENSE.txt', 'screenshots/**' ]
   schedule:
     - cron: '44 20 * * 3'
 
 jobs:
   analyze:
     name: Analyze
-    runs-on: ubuntu-latest
+    # Windows: this is an MSVC project, and CodeQL's C++ autobuild only works there.
+    runs-on: windows-latest
     permissions:
       actions: read
       contents: read
@@ -39,33 +44,20 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
-    # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v1
+      uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
-        # If you wish to specify custom queries, you can do so here or in a config file.
-        # By default, queries listed here will override any specified in a config file.
-        # Prefix the list here with "+" to use these queries and those in the config file.
-        # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
-    # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
-    # If this step fails, then you should remove it and run the build manually (see below)
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v1
+    - uses: microsoft/setup-msbuild@v2
 
-    # ℹ️ Command-line programs to run using the OS shell.
-    # 📚 https://git.io/JvXDl
-
-    # ✏️ If the Autobuild fails above, remove it and uncomment the following three lines
-    #    and modify them (or add more) to build your code if your project
-    #    uses a compiled language
-
-    #- run: |
-    #   make bootstrap
-    #   make release
+    # Manual build instead of autobuild: it must be a full (re)build so CodeQL sees every
+    # compile. The projects target v142 (VS2019); the runner has VS2022, so retarget to v143.
+    # The post-build step copies to the author's game folder, so skip it.
+    - name: Build d2dx.dll
+      run: msbuild src/d2dx/d2dx.vcxproj /m /t:Rebuild /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v143 /p:PostBuildEventUseInBuild=false
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v1
+      uses: github/codeql-action/analyze@v3
