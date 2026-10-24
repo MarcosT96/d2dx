@@ -15,6 +15,9 @@ Research basis: a survey of upstream's forks, open PRs and issues on 2026-10-24.
 | Skip the Windows build/tests for docs-only changes; `Tests` workflow only on pushes to `main` | fork#9 | 2026-10-24 |
 | Release process: `version.h` as the single version source; release-please + build/test/publish `d2dx.zip` | fork#11, fork#12 | 2026-10-24 |
 | First release `0.0.1` (`d2dx.zip`; played on 1.14d under Wine/Proton, no problems) | fork#15 | 2026-10-24 |
+| Port: FPS slowdown in long sessions (64-bit frame timing, 32-bit unit IDs) and an uninitialised frame-time fix; upstream PR 188 by Jarcho | fork#23 | 2026-10-24 |
+| Port: smaller GPU vertex buffer (64 to 16 MiB); upstream PR 187 by Jarcho | fork#24 | 2026-10-24 |
+| Release `0.0.2` with both ports (not yet played in-game); the release-PR CI skip is confirmed working | fork#25 | 2026-10-24 |
 | Dependabot for GitHub Actions | fork#3 | 2026-10-24 |
 | This tracker, plus attribution guidance | fork#8 | 2026-10-24 |
 | README made the fork's own; upstream changelog moved to `docs/upstream-changelog.md`; status badges; release no longer forced to prerelease | fork#18 | 2026-10-24 |
@@ -23,21 +26,17 @@ Research basis: a survey of upstream's forks, open PRs and issues on 2026-10-24.
 | Repo settings: fork description, topics, squash merges use PR title + body | settings | 2026-10-24 |
 
 ## In progress (this fork)
-| Item | Where | Status |
-|---|---|---|
-| Skip CI on the release-please PR (the release job tests the tagged commit) | fork#16 | merged; unverified until the next release PR |
+Nothing.
 
 ## Planned (priority order)
 Source is mostly Jarcho's split-out upstream PRs. Port them one at a time, each through CI, preserving authorship (see `AGENTS.md`, "Attribution").
 
 | # | Item | Upstream | Fixes / relates to | Risk and notes |
 |---|---|---|---|---|
-| 1 | Fix FPS slowdown in long sessions (64-bit timing, 32-bit unit IDs) | PR #188 | #166, #146, #141 | Small. Most-reported complaint. |
-| 2 | Shrink vertex buffer (4M → 1M vertices) | PR #187 | #125 (unconfirmed) | Trivial, but a smaller buffer could overflow on heavy scenes. Check. |
-| 3 | Extend support to all game versions (per-version cell/unit structs, 1.10f/1.12 resolution mod, SGD2FreeRes update) | PR #185 | #172, #167, #165, #155, #95, #38 | Large. **Do not ship a binary `SGD2FreeRes.dll` unless its source and licence are confirmed** (see Licensing in `AGENTS.md`). |
-| 4 | Full-screen-width cutscenes + `nokeepaspectratio` | PR #186 | #99; related #78, #182, #173, #212 | **Conflicts with our `GetRenderRect` fix** (signature change in `Metrics.cpp`); resolve against the fix and keep the tests passing. |
-| 5 | xxHash for texture/palette hashing | PR #190 | #140 (maybe #166, #146) | Risky: once broke Median XL (author says fixed); hardcoded hash constants must be updated consistently. Needs `thirdparty/xxhash` with its licence and a README credit. |
-| 6 | Cursor clipping / activation fixes | PR #192 | #159; related #50, #85 | Overlaps `RenderContext.cpp` with #186 and #190; rebase last. |
+| 1 | Extend support to all game versions (per-version cell/unit structs, 1.10f/1.12 resolution mod, SGD2FreeRes update) | PR #185 | #172, #167, #165, #155, #95, #38 | Large. **Do not ship a binary `SGD2FreeRes.dll` unless its source and licence are confirmed** (see Licensing in `AGENTS.md`). |
+| 2 | Full-screen-width cutscenes + `nokeepaspectratio` | PR #186 | #99; related #78, #182, #173, #212 | **Conflicts with our `GetRenderRect` fix** (signature change in `Metrics.cpp`); resolve against the fix and keep the tests passing. |
+| 3 | xxHash for texture/palette hashing | PR #190 | #140 (maybe #166, #146) | Risky: once broke Median XL (author says fixed); hardcoded hash constants must be updated consistently. Needs `thirdparty/xxhash` with its licence and a README credit. |
+| 4 | Cursor clipping / activation fixes | PR #192 | #159; related #50, #85 | Overlaps `RenderContext.cpp` with #186 and #190; rebase last. |
 
 ## Backlog (unscheduled)
 | Item | Source | Notes |
