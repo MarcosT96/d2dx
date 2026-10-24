@@ -18,8 +18,25 @@ D2DX is a **Glide 3x wrapper DLL** for Diablo II: Lord of Destruction. It is bui
 - HLSL shaders (`*.hlsl`, `*.hlsli`) are compiled by MSBuild during the build into generated headers (`*_cso.h`, gitignored). `Display.hlsli`/`Game.hlsli`/`Constants.hlsli`/`FXAA.hlsli` are shared includes.
 - The `d2dx` post-build step copies `glide3x.dll` to `C:\games\Diablo II\`. That path is the original author's; change it locally (or ignore the failure), don't commit machine-specific paths.
 - `src/d2dx/d2dx.vcxproj.user` and `src/d2dxtests/*.vcxproj.user` are tracked; avoid committing personal VS settings changes.
-- **The dev machine here is Linux** (Fedora). The code cannot be compiled or run here (Win32, D3D11, `windows.h`, MSVC-specific SAL annotations like `_In_`). Don't claim a change is built or tested unless it actually was. Edits made on Linux are unverified until built in VS. Say so in summaries.
-- CI is only CodeQL (`.github/workflows/codeql-analysis.yml`). There is no build or test CI.
+- **The full build only works on Windows** (Win32, D3D11, `windows.h`, MSVC SAL annotations). The dev machines here are Linux/macOS, so don't claim a change is built or tested unless one of the two test paths below actually ran it, and say which.
+
+## Running the tests
+
+Two paths, same test sources (`src/d2dxtests`):
+
+1. **Portable local check (fast, partial):** `tests/linux/run.sh`. It builds a small Debian image (clang, 32-bit multilib, cmake) with podman or docker and runs the tests inside. It works the same on Fedora and macOS and installs nothing on the host. Always `linux/amd64` (emulated on Apple Silicon) because `SimdSse2.cpp` uses SSE2 intrinsics.
+   - It compiles only the pure-logic sources: `SimdSse2`, `Metrics`, `TextureCache`, `TextureCachePolicyBitPmru`, plus the tests for `Batch`. Windows and D3D bits are replaced by shims in `tests/linux/shim/` (`pch.h`, `CppUnitTest.h`, `UtilsStub.cpp`, `Utils.h`, `D2DXContext.h`, `main.cpp`). Sources are copied into the build dir so the shim `pch.h` shadows the real one.
+   - It is 32-bit (`-m32`) because `D2Types.h` static-asserts Win32 struct sizes.
+   - If a test needs a new Windows symbol, extend the shim rather than editing production code.
+   - It tests logic only, not MSVC behaviour. A pass here is not a pass on Windows.
+2. **Windows CI (authoritative):** `.github/workflows/tests.yml` builds the test project and the DLL on `windows-latest` and runs `vstest.console`. It runs on every push and PR. Check it with `gh run list` / `gh run view --log-failed` once `gh` is authenticated, and get it green before merging.
+
+Rendering, Detours hooks and anything touching a live game or D3D device can't be covered by either; they need a manual run on Windows.
+
+### Known failing tests
+`tests/linux/known-failures.txt` lists tests that already fail on upstream `main`: both `TestRenderRects...` tests in `TestMetrics.cpp`, caused by 1px rounding bugs in `Metrics::GetRenderRect` (for example 3200x2048 comes out 3199 wide, and 614x761 gets a 762-tall rect that trips the `assert`). Both runners skip them (Linux reports `[KNOWN]`, CI filters them by name), so any other failure is a new regression. Remove an entry once the bug is fixed. Don't add entries to hide new failures.
+
+- Other CI: CodeQL (`.github/workflows/codeql-analysis.yml`).
 - Runtime log: the DLL writes `d2dx_log.txt` in the game folder (via `D2DX_LOG`). Config is `d2dx.cfg` (TOML); `d2dx-defaults.cfg` is the documented example.
 
 ## Architecture (src/d2dx)
@@ -68,7 +85,7 @@ Also supported/detected: Project Diablo 2 (logged in `GameHelper`); its suggeste
 - If you change the SGD2FreeRes binaries, regenerate the matching `.lzma` files that `d2dx.rc` embeds (note the `.rc` references lowercase `sgd2freeres.*.lzma` filenames while the files on disk are `SGD2FreeRes.*.lzma`; fine on Windows, case-sensitive on Linux).
 - New user-facing options: add to `OptionsFlag` (or a typed setter) in `Options.h/.cpp`, document in `d2dx-defaults.cfg`, and mention in `README.md`.
 - Keep the changelog in `README.md` current for user-visible changes, and bump the version string there.
-- Add unit tests in `src/d2dxtests` for logic that doesn't need a live game or D3D device (batching, SIMD, metrics, texture cache). Rendering and hook code can only be verified by running the game on Windows.
+- Add unit tests in `src/d2dxtests` for logic that doesn't need a live game or D3D device (batching, SIMD, metrics, texture cache). New test `.cpp` files must be added to both `d2dxtests.vcxproj` and `tests/linux/CMakeLists.txt`. Run `tests/linux/run.sh` before committing.
 
 ## Open questions / not yet verified
 
