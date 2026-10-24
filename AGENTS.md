@@ -34,10 +34,7 @@ Two paths, same test sources (`src/d2dxtests`):
 Rendering, Detours hooks and anything touching a live game or D3D device can't be covered by either; they need a manual run on Windows.
 
 ### Known failing tests
-`tests/linux/known-failures.txt` lists tests that already fail on upstream `main`: both `TestRenderRects...` tests in `TestMetrics.cpp`, caused by 1px rounding bugs in `Metrics::GetRenderRect` (for example 3200x2048 comes out 3199 wide, and 614x761 gets a 762-tall rect that trips the `assert`). Both runners skip them (Linux reports `[KNOWN]`, CI filters them by name), so any other failure is a new regression. Remove an entry once the bug is fixed. Don't add entries to hide new failures.
-
-- Other CI: CodeQL (`.github/workflows/codeql-analysis.yml`).
-- Runtime log: the DLL writes `d2dx_log.txt` in the game folder (via `D2DX_LOG`). Config is `d2dx.cfg` (TOML); `d2dx-defaults.cfg` is the documented example.
+`tests/linux/known-failures.txt` lists tests that are expected to fail. Both runners skip them (Linux reports `[KNOWN]`, CI filters by name), so any other failure is a regression. It is currently empty. Remove an entry once its bug is fixed, and don't add entries to hide new failures. A failed `assert()` in a Debug test hangs the Windows runner (headless dialog), which is why the CI job has a 15-minute timeout.
 
 ## Architecture (src/d2dx)
 
