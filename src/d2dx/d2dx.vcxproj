@@ -165,6 +165,7 @@
     <ClInclude Include="Batch.h" />
     <ClInclude Include="GameHelper.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="version.h" />
     <ClInclude Include="ISimd.h" />
     <ClInclude Include="SimdSse2.h" />
     <ClInclude Include="TextureCachePolicyBitPmru.h" />

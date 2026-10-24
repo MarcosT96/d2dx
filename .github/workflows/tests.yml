@@ -89,6 +89,18 @@ jobs:
       - name: Build d2dx.dll
         run: msbuild src/d2dx/d2dx.vcxproj /m /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v143 /p:PostBuildEventUseInBuild=false
 
+      # version.h is the single source of the version (release-please rewrites it); this checks the
+      # resource compiler turned it into the DLL's file properties.
+      - name: Check DLL version matches version.h
+        shell: pwsh
+        run: |
+          $h = Get-Content src/d2dx/version.h -Raw
+          $parts = foreach ($p in 'MAJOR', 'MINOR', 'PATCH') { [regex]::Match($h, "#define D2DX_VERSION_$p (\d+)").Groups[1].Value }
+          $expected = ($parts -join '.') + '.0'
+          $info = (Get-Item src/d2dx/Release/glide3x.dll).VersionInfo
+          Write-Host "FileVersion=$($info.FileVersion) ProductVersion=$($info.ProductVersion) expected=$expected"
+          if ($info.FileVersion -ne $expected -or $info.ProductVersion -ne $expected) { throw "DLL version does not match version.h" }
+
       - name: Run unit tests
         shell: pwsh
         run: |
