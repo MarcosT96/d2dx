@@ -15,13 +15,15 @@ Research basis: a survey of upstream's forks, open PRs and issues on 2026-10-24.
 | Skip the Windows build/tests for docs-only changes; `Tests` workflow only on pushes to `main` | fork#9 | 2026-10-24 |
 | Release process: `version.h` as the single version source; release-please + build/test/publish `d2dx.zip` | fork#11, fork#12 | 2026-10-24 |
 | First release `0.0.1` (`d2dx.zip`; played on 1.14d under Wine/Proton, no problems) | fork#15 | 2026-10-24 |
+| Dependabot for GitHub Actions | fork#3 | 2026-10-24 |
+| This tracker, plus attribution guidance | fork#8 | 2026-10-24 |
+| README made the fork's own; upstream changelog moved to `docs/upstream-changelog.md`; status badges; release no longer forced to prerelease | fork#18 | 2026-10-24 |
+| Repo housekeeping: Issues enabled, merged and scratch branches deleted, dead links removed (the imgur video is gone) | this PR | 2026-10-24 |
 
 ## In progress (this fork)
 | Item | Where | Status |
 |---|---|---|
-| Skip CI on the release-please PR (the release job tests the tagged commit); first real use is the next release PR | fork#16 | open |
-| Dependabot for GitHub Actions | fork#3 | open |
-| This tracker | fork#8 | open |
+| Skip CI on the release-please PR (the release job tests the tagged commit) | fork#16 | merged; unverified until the next release PR |
 
 ## Planned (priority order)
 Source is mostly Jarcho's split-out upstream PRs. Port them one at a time, each through CI, preserving authorship (see `AGENTS.md`, "Attribution").

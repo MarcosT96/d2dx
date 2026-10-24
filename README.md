@@ -14,17 +14,14 @@ This is a maintained fork of [bolrog/d2dx](https://github.com/bolrog/d2dx), whic
 
 ## Features
   - Turns the game into a well behaved DirectX 11 title on Windows 10 (also 7, 8 and 8.1).
-  - High quality scaling to fit modern screen sizes, including [widescreen aspect ratios](https://raw.githubusercontent.com/bolrog/d2dx/main/screenshots/d2dx2.png).
-  - High FPS mod using motion prediction, bypassing the internal 25 fps limit. Play at 60 fps and higher! ([video](https://imgur.com/a/J1F8Ctb))
+  - High quality scaling to fit modern screen sizes, including [widescreen aspect ratios](https://raw.githubusercontent.com/jackrayner/d2dx/main/screenshots/d2dx2.png).
+  - High FPS mod using motion prediction, bypassing the internal 25 fps limit. Play at 60 fps and higher!
   - [Anti-aliasing](https://github.com/bolrog/d2dx/wiki/Screenshots#anti-aliasing) of specific jagged edges in the game (sprites, walls, some floors).
   - Seamless windowed/fullscreen switching with (ALT-Enter).
   - Improved fullscreen: instant ALT-TAB and low latency.
   - Improved windowed mode.
   - Proper gamma/contrast.
   - Fixes a few window-related glitches in Diablo II itself.
-
-### Video Showcasing Motion Prediction
-  [FPS increase in menus, FPS increase for projectiles, monsters, +more](https://imgur.com/a/J1F8Ctb)
 
 ## Requirements
   - Diablo 2: LoD (see Compatibility section below).
@@ -63,7 +60,7 @@ Many of the default settings of D2DX can be changed. To use a configuration file
   You are running the download version of Diablo II from blizzard.com. It can be modified to work with D2DX, but this fork does not document how yet.
 
 ### It's ugly/slow/buggy.
-  Check [DEVELOPMENT.md](https://github.com/jackrayner/d2dx/blob/main/DEVELOPMENT.md) to see whether it is a known or planned item, and include `d2dx_log.txt` from your Diablo II folder when reporting a problem.
+  Check [DEVELOPMENT.md](https://github.com/jackrayner/d2dx/blob/main/DEVELOPMENT.md) to see whether it is a known or planned item, then [open an issue](https://github.com/jackrayner/d2dx/issues) and include `d2dx_log.txt` from your Diablo II folder, your game version and your OS.
 
 ## Credits
 Original author: bolrog
