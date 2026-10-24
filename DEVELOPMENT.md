@@ -17,6 +17,7 @@ Research basis: a survey of upstream's forks, open PRs and issues on 2026-10-24.
 ## In progress (this fork)
 | Item | Where | Status |
 |---|---|---|
+| Release process: version.h single source, release-please, build/test/publish `d2dx.zip` (first release `0.0.1`, prerelease until played) | fork#11 and the release-please PR stacked on it | in review |
 | Dependabot for GitHub Actions | fork#3 | open |
 | This tracker | fork#8 | open |
 

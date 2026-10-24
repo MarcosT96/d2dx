@@ -1,0 +1,91 @@
+name: Release
+
+# release-please keeps a release PR up to date on every push to main. Merging that PR tags the
+# commit and creates the GitHub release; the jobs below then build, test and attach d2dx.zip.
+#
+# Everything is one workflow on purpose: a release created with GITHUB_TOKEN does not trigger
+# other workflows, so a separate `on: release` workflow would never run.
+
+on:
+  push:
+    branches: [ main ]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+    steps:
+      - id: rp
+        uses: googleapis/release-please-action@v5
+
+  # Same build, DLL checks and unit tests as CI, on the tagged commit.
+  test-and-build:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    uses: ./.github/workflows/tests.yml
+    with:
+      ref: ${{ needs.release-please.outputs.tag_name }}
+      force: true
+
+  publish:
+    needs: [ release-please, test-and-build ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.release-please.outputs.tag_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: glide3x-dll
+          path: dist
+
+      # Same layout as upstream's d2dx.zip (glide3x.dll at the top level, licences under licenses/),
+      # which downstream installers rely on.
+      - name: Package d2dx.zip
+        run: |
+          set -euo pipefail
+          mkdir -p stage/licenses
+          cp dist/glide3x.dll stage/
+          cp README.md d2dx-defaults.cfg stage/
+          cp LICENSE.txt toml-LICENSE.txt stage/licenses/
+          cp "thirdparty/sgd2freeres/SGD2FreeRes - COPYING" "thirdparty/sgd2freeres/SGD2FreeRes - LICENSE.md" stage/licenses/
+          cp thirdparty/pocketlzma/pocketlzma-LICENSE.txt stage/licenses/
+          cat > stage/SOURCE.txt <<EOF
+          D2DX $TAG
+          Corresponding source code (GPLv3): https://github.com/$GITHUB_REPOSITORY/tree/$TAG
+          This is a fork of bolrog/d2dx. Licences of the bundled components are in the licenses folder.
+          EOF
+          (cd stage && zip -r -X ../d2dx.zip .)
+          unzip -l d2dx.zip
+          test "$(unzip -Z1 d2dx.zip | grep -cx 'glide3x.dll')" = 1
+
+      # Never replace an asset: downstream installers pin the checksum, so every build gets a new tag.
+      # `gh release upload` without --clobber fails if d2dx.zip already exists.
+      - name: Attach d2dx.zip to the release
+        run: gh release upload "$TAG" d2dx.zip
+
+      - name: Record the SHA-256 in the release notes
+        run: |
+          set -euo pipefail
+          sha=$(sha256sum d2dx.zip | cut -d' ' -f1)
+          { gh release view "$TAG" --json body --jq .body; printf '\n\n---\n`d2dx.zip` SHA-256: `%s`\n' "$sha"; } > notes.md
+          gh release edit "$TAG" --notes-file notes.md
+          echo "d2dx.zip SHA-256: $sha" >> "$GITHUB_STEP_SUMMARY"
