@@ -13,11 +13,12 @@ Research basis: a survey of upstream's forks, open PRs and issues on 2026-10-24.
 | Fix `GetRenderRect` out-of-bounds rects (both `TestMetrics` known failures now pass) | fork#4 | 2026-10-24 |
 | Run CodeQL on Windows with a manual MSBuild step | fork#7 | 2026-10-24 |
 | Skip the Windows build/tests for docs-only changes; `Tests` workflow only on pushes to `main` | fork#9 | 2026-10-24 |
+| Release process: `version.h` as the single version source; release-please + build/test/publish `d2dx.zip` | fork#11, fork#12 | 2026-10-24 |
 
 ## In progress (this fork)
 | Item | Where | Status |
 |---|---|---|
-| Release process: version.h single source, release-please, build/test/publish `d2dx.zip` (first release `0.0.1`, prerelease until played) | fork#11 and the release-please PR stacked on it | in review |
+| First release `0.0.1` (prerelease until someone has played it in-game; then the Lutris installer can use `d2dx.zip`) | release PR | pending |
 | Dependabot for GitHub Actions | fork#3 | open |
 | This tracker | fork#8 | open |
 
