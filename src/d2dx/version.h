@@ -8,7 +8,7 @@
 
 #define D2DX_VERSION_MAJOR 0 // x-release-please-major
 #define D2DX_VERSION_MINOR 0 // x-release-please-minor
-#define D2DX_VERSION_PATCH 0 // x-release-please-patch
+#define D2DX_VERSION_PATCH 1 // x-release-please-patch
 
 #define D2DX_STRINGIZE_(x) #x
 #define D2DX_STRINGIZE(x) D2DX_STRINGIZE_(x)
