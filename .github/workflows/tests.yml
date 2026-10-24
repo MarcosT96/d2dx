@@ -10,6 +10,8 @@ on:
 jobs:
   build-and-test:
     runs-on: windows-latest
+    # A normal run takes ~2 minutes; a failed assert() in a Debug test can hang the headless runner.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
