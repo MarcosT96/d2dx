@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.0.2](https://github.com/jackrayner/d2dx/compare/0.0.1...0.0.2) (2026-10-24)
+
+
+### Bug Fixes
+
+* fix precision lost when calculating the frame time ([99bf75f](https://github.com/jackrayner/d2dx/commit/99bf75fff1fe5d03ec35beb6a60f77f0c71265b3))
+* initialise the previous frame time ([67771bf](https://github.com/jackrayner/d2dx/commit/67771bfe0c67adb09e85c63206eaaff13a55f96e))
+* stop frame timing and unit IDs losing precision in long sessions ([75c3cbe](https://github.com/jackrayner/d2dx/commit/75c3cbedfa29ed680fe76451519bc964b3c7944b))
+* use the full 32-bit unit ids and unit types in the motion predictor ([1471c16](https://github.com/jackrayner/d2dx/commit/1471c16ed47f449349475944d4a9bdfb9f2a0988))
+
+
+### Performance Improvements
+
+* shrink the GPU vertex buffer to 1M vertices ([5d62ad0](https://github.com/jackrayner/d2dx/commit/5d62ad0e758f1455023d1b0ecbdff4467068b7da))
+* shrink the vertex buffer ([1361ff8](https://github.com/jackrayner/d2dx/commit/1361ff8af129a88198702c59bb5791c46c84d6ee))
+
 ## 0.0.1 (2026-10-24)
 
 
