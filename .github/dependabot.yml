@@ -4,3 +4,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # Conventional commit titles, so release-please can read Dependabot's PRs.
+    commit-message:
+      prefix: "chore"
+      include: "scope"

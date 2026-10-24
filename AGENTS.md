@@ -78,6 +78,7 @@ Also supported/detected: Project Diablo 2 (logged in `GameHelper`); its suggeste
 ## Working conventions
 - **Tracker:** `DEVELOPMENT.md` lists planned work, the backlog, and what we've decided not to do (with reasons). Check it before starting a feature and update it in the same PR that changes an item's status.
 
+- **Conventional commit titles** (`fix:`, `feat:`, `perf:`, `docs:`, `build:`, `ci:`, `chore:`, optional scope, `!` for breaking). release-please builds the changelog and picks the next version from them, and only `feat`/`fix`/`perf`/`revert` (or a `Release-As:` footer) trigger a release PR. Prefer squash merges so the PR title becomes the commit it reads; with merge commits it reads the individual branch commits instead.
 - Follow the global rules in `~/.claude/CLAUDE.md`: no commits or pushes unless asked; confirm before destructive or outward-facing actions.
 - Don't edit `thirdparty/` except to deliberately update a dependency. It holds vendored binaries (`detours.lib`, `SGD2FreeRes.*`) and licensed code.
 - If you change the SGD2FreeRes binaries, regenerate the matching `.lzma` files that `d2dx.rc` embeds (note the `.rc` references lowercase `sgd2freeres.*.lzma` filenames while the files on disk are `SGD2FreeRes.*.lzma`; fine on Windows, case-sensitive on Linux).
@@ -85,9 +86,21 @@ Also supported/detected: Project Diablo 2 (logged in `GameHelper`); its suggeste
 - Keep the changelog in `README.md` current for user-visible changes, and bump the version string there.
 - Add unit tests in `src/d2dxtests` for logic that doesn't need a live game or D3D device (batching, SIMD, metrics, texture cache). New test `.cpp` files must be added to both `d2dxtests.vcxproj` and `tests/linux/CMakeLists.txt`. Run `tests/linux/run.sh` before committing.
 
+## Releasing
+
+Releases are automated by release-please (`release-please-config.json`, `.release-please-manifest.json`, `.github/workflows/release.yml`), the same pattern as `jackrayner/ha-pypowerwall`. Tags have no `v` and start at `0.0.1`.
+- On every push to `main`, release-please opens or updates a release PR from the conventional commits since the last release. Review its changelog and edit the notes there (the first release's notes should say what it is based on and that it was only unit-tested, not played).
+- Merging that PR tags and creates the GitHub release (flagged prerelease until someone has run the DLL in-game), then the same workflow builds the tagged commit, runs the checks and unit tests (`tests.yml`, called with `force`), and attaches `d2dx.zip`. The zip has the same layout as upstream's: `glide3x.dll` at the top level, `README.md`, `d2dx-defaults.cfg`, `licenses/`, plus `SOURCE.txt`. The notes get the zip's SHA-256 appended.
+- **Never replace a published asset.** Downstream installers pin the checksum. A fix means a new release and tag.
+- To force a version or release with no `feat`/`fix` commits, push a commit to `main` with a `Release-As: X.Y.Z` footer.
+- **The version lives in `src/d2dx/version.h`**, which release-please rewrites (do not edit by hand; keep the `x-release-please-*` markers). `d2dx.rc` and the README version line derive from it. Visual Studio can rewrite `d2dx.rc`; keep the `#include "version.h"` in its `TEXTINCLUDE 2` block.
+- A release PR is created with `GITHUB_TOKEN`, so CI doesn't run on it and the required `build-and-test` check won't report; the repo owner merges it as an Admin. The release job's own test step is the gate.
+- CI also fails if the DLL starts importing the Visual C++/UCRT runtime (the README promises no redistributable install), and uploads the built DLL as the `glide3x-dll` artifact on each run for manual in-game testing.
+- What CI can't tell you: whether the DLL works in the game. Run it in a Diablo II folder (`-3dfx`) before removing the prerelease flag.
+
 ## Open questions / not yet verified
 
-- The version lives in `README.md` and `src/d2dx/d2dx.rc`. In the `.rc`, the numeric `FILEVERSION`/`PRODUCTVERSION` are stale (`0,99,330,0`, already so at the 0.99.529 tag) while the string values say `0.99.529.0`. These describe the last release, not `main`. Update all of them together when bumping.
+- The old 0.99.529 label (README, `.rc`) described the last upstream release. The version is now `src/d2dx/version.h` (see Releasing); the DLL reports `0.0.0.0` until the first release.
 - Fork goals are not documented yet. Add them here once decided.
 
 ## Licensing and attribution

@@ -9,12 +9,25 @@ on:
   push:
     branches: [ main ]
   pull_request:
+  # Also callable from release.yml, which builds and tests the tagged commit before publishing.
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Commit or tag to build (default: the triggering commit)'
+        type: string
+        default: ''
+      force:
+        description: 'Skip the docs-only detection and always build'
+        type: boolean
+        default: false
 
 jobs:
   # `build-and-test` is a required check on main, so the workflow must always run and report it.
   # A trigger-level `paths-ignore` would leave the check pending forever on docs-only PRs.
   # Instead this cheap job decides, and a job skipped by `if:` counts as passing for required checks.
   changes:
+    # Skipped when called with force: build-and-test's condition below runs for a non-success result.
+    if: ${{ !inputs.force }}
     runs-on: ubuntu-latest
     outputs:
       code: ${{ steps.filter.outputs.code }}
@@ -78,6 +91,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
 
       - uses: microsoft/setup-msbuild@v2
 
@@ -101,6 +116,20 @@ jobs:
           Write-Host "FileVersion=$($info.FileVersion) ProductVersion=$($info.ProductVersion) expected=$expected"
           if ($info.FileVersion -ne $expected -or $info.ProductVersion -ne $expected) { throw "DLL version does not match version.h" }
 
+      # The README says no Visual C++ runtime install is needed, which holds only while the DLL is
+      # statically linked (/MT). Fail if the build starts depending on a redistributable DLL.
+      - name: Check DLL imports
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -property installationPath
+          $dumpbin = Get-ChildItem "$vs\VC\Tools\MSVC" -Recurse -Filter dumpbin.exe | Where-Object { $_.FullName -match 'Hostx64\\x64' } | Select-Object -First 1
+          if (-not $dumpbin) { throw "dumpbin.exe not found" }
+          $deps = & $dumpbin.FullName /dependents src/d2dx/Release/glide3x.dll | ForEach-Object { if ($_ -match '^\s+(\S+\.dll)\s*$') { $Matches[1] } }
+          Write-Host "Imports: $($deps -join ', ')"
+          if (-not $deps) { throw "could not read the DLL's imports" }
+          $bad = $deps | Where-Object { $_ -match '^(VCRUNTIME|MSVCP|MSVCR|VCOMP|CONCRT|api-ms-win-crt|ucrtbase)' }
+          if ($bad) { throw "DLL depends on the Visual C++/UCRT runtime: $($bad -join ', ')" }
+
       - name: Run unit tests
         shell: pwsh
         run: |
@@ -120,3 +149,13 @@ jobs:
         with:
           name: test-results
           path: "**/TestResults/*.trx"
+
+      # The built DLL, for manual in-game testing from a PR and for the release job to package.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: glide3x-dll
+          path: |
+            src/d2dx/Release/glide3x.dll
+            src/d2dx/Release/glide3x.pdb
+          if-no-files-found: error
+          retention-days: 14
