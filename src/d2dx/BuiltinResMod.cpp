@@ -149,6 +149,10 @@ bool BuiltinResMod::WriteConfig(
     DWORD bytesWritten = 0;
     bool succeeded = true;
 
+    // No longer used: the list is the realm's allowlist, not the window size.
+    // Kept in the signature because BuiltinResMod.h and the caller pass it.
+    (void)gameSize;
+
     file = CreateFileA("d2dx_sgd2freeres.json", GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (!file)
     {
@@ -168,13 +172,17 @@ bool BuiltinResMod::WriteConfig(
         "           \"Minor Version A\" : 1,\r\n"
         "           \"Minor Version B\" : 0\r\n"
         "       },\r\n"
+        // The resolutions this realm allows, not the engine's 4:3 modes plus
+        // whatever the window happens to be: online the per-IP allowlist decides
+        // (1068x600 and 1344x700), and offline this generated config is read
+        // instead, so the two must agree or the client offers a mode the realm
+        // will refuse. Main Menu Resolution has to be one of them.
         "       \"Ingame Resolutions\": [\r\n"
-        "           \"640x480\",\r\n"
-        "           \"800x600\",\r\n"
-        "           \"%ix%i\"\r\n"
+        "           \"1068x600\",\r\n"
+        "           \"1344x700\"\r\n"
         "       ],\r\n"
         "       \"Ingame Resolution Mode\" : 2,\r\n"
-        "       \"Main Menu Resolution\" : \"800x600\",\r\n"
+        "       \"Main Menu Resolution\" : \"1068x600\",\r\n"
         "       \"Custom MPQ File\": \"d2dx_sgd2freeres.mpq\",\r\n"
         "       \"Enable Screen Border Frame?\" : true,\r\n"
         "       \"Use Original Screen Border Frame?\" : false,\r\n"
@@ -183,8 +191,7 @@ bool BuiltinResMod::WriteConfig(
         "   \"!!!Globals!!!\": {\r\n"
         "       \"Config Tab Width\": 4\r\n"
         "   }\r\n"
-        "}\r\n",
-        gameSize.width, gameSize.height);
+        "}\r\n");
 
     if (!WriteFile(file, configStr, strlen(configStr), &bytesWritten, nullptr))
     {
