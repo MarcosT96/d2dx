@@ -11,19 +11,21 @@ name: Latam widescreen
 # The result is a `glide3x.dll` that offers the resolutions we chose on our
 # realm. Nothing here is committed to the fork's main: it is a build recipe.
 on:
+  push:
+    branches: [latam/widescreen]
   workflow_dispatch:
-    inputs:
-      variant:
-        description: 'Allowlist variant (v1 = widescreen only, v2 = widescreen + 800x600 fallback)'
-        required: true
-        default: v1
-        type: choice
-        options: [v1, v2]
 
 jobs:
   build:
     runs-on: windows-latest
     timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        # v1: only the two widescreen modes. v2: same, plus the engine's 800x600
+        # kept as a fallback, since no upstream allowlist entry omits both base
+        # modes and the registry resolution index depends on list size.
+        variant: [v1, v2]
     steps:
       - uses: actions/checkout@v4
 
@@ -44,7 +46,7 @@ jobs:
       - name: Insert the D2Latam allowlist entry
         shell: pwsh
         run: |
-          python .latam/apply_allowlist.py "sgd2/SlashGaming-Diablo-II-Free-Resolution/src/helper/game_resolution.cc" "${{ inputs.variant }}"
+          python .latam/apply_allowlist.py "sgd2/SlashGaming-Diablo-II-Free-Resolution/src/helper/game_resolution.cc" "${{ matrix.variant }}"
 
       - name: Build SGD2FreeRes (Win32, Release)
         shell: pwsh
@@ -108,11 +110,11 @@ jobs:
           Write-Host "glide3x.dll $((Get-Item $dll).Length) bytes, FileVersion=$($info.FileVersion)"
           Write-Host "sha256 $((Get-FileHash $dll -Algorithm SHA256).Hash)"
           Write-Host "embedded dll sha256 $((Get-FileHash thirdparty/sgd2freeres/sgd2freeres.dll -Algorithm SHA256).Hash)"
-          Write-Host "variant ${{ inputs.variant }}"
+          Write-Host "variant ${{ matrix.variant }}"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: glide3x-latam-${{ inputs.variant }}
+          name: glide3x-latam-${{ matrix.variant }}
           path: |
             src/d2dx/Release/glide3x.dll
             thirdparty/sgd2freeres/sgd2freeres.dll
