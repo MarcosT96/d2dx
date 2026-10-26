@@ -83,9 +83,25 @@ def main(argv):
 
     entry = ENTRY_V1 if variant == "v1" else ENTRY_V2
     out = text[:insert_at] + entry + text[insert_at:]
+
+    # The table is a std::array whose size is written by hand, so the entry and
+    # the count have to move together or the last entries are "too many
+    # initializers" (C2078) and nothing compiles.
+    import re
+    pat = re.compile(r"(std::array<\s*Ipv4HashResolutionTableEntry,\s*)(\d+)(\s*>)")
+    matches = pat.findall(out)
+    if len(matches) != 1:
+        raise SystemExit("expected exactly one std::array<Ipv4HashResolutionTableEntry, N>, found %d" % len(matches))
+    declared = int(matches[0][1])
+    entries = out.count("Ipv4HashResolutionTableEntry(")
+    if declared != entries - 1:
+        raise SystemExit("table declares %d but has %d entries; refusing to guess" % (declared, entries - 1))
+    out = pat.sub(lambda m: m.group(1) + str(declared + 1) + m.group(3), out, count=1)
+
     open(path, "w", encoding="utf-8", newline="").write(out)
 
     print("inserted %s entry for %s at byte %d" % (variant, KEY, insert_at))
+    print("array size %d -> %d" % (declared, declared + 1))
     print("file sha256 now %s" % hashlib.sha256(out.encode("utf-8")).hexdigest())
     return 0
 
