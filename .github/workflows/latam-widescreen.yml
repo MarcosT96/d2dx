@@ -36,6 +36,11 @@ jobs:
           ref: 3.0.3.1
           path: sgd2
           submodules: recursive
+          # The icon in resource/ is stored in Git LFS (the blob in git is a
+          # 130-byte pointer). Without this the checkout leaves the pointer on
+          # disk and rc.exe rejects it as "not in 3.00 format", failing the
+          # build at the resource step after every C++ file compiled fine.
+          lfs: true
           # The project keeps its .ico in Git LFS (*.ico filter=lfs), and a
           # checkout without LFS hands the resource compiler the 130-byte
           # pointer instead of the icon: RC2175 "not in 3.00 format".
