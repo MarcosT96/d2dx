@@ -182,7 +182,10 @@ bool BuiltinResMod::WriteConfig(
         "           \"1344x700\"\r\n"
         "       ],\r\n"
         "       \"Ingame Resolution Mode\" : 2,\r\n"
-        "       \"Main Menu Resolution\" : \"1068x600\",\r\n"
+        // The menu is NOT the game: the front-end CELs are 640x480/800x600 and
+        // asking for a widescreen mode there renders black. The ingame list above
+        // stays the realm's two modes; this one field is the menu's own.
+        "       \"Main Menu Resolution\" : \"800x600\",\r\n"
         "       \"Custom MPQ File\": \"d2dx_sgd2freeres.mpq\",\r\n"
         "       \"Enable Screen Border Frame?\" : true,\r\n"
         "       \"Use Original Screen Border Frame?\" : false,\r\n"
