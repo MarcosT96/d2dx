@@ -1,0 +1,119 @@
+name: Latam widescreen
+
+# Builds the two artifacts we actually need, in one run and with the same MSVC
+# toolchain upstream uses:
+#
+#   1. SGD2FreeRes 3.0.3.1 from the official source, with the D2Latam realm
+#      inserted into the per-IP resolution allowlist, and with the 23-byte
+#      config-filename change that makes it read D2DX's generated config;
+#   2. D2DX 0.0.3 with that DLL embedded as its `dll` resource.
+#
+# The result is a `glide3x.dll` that offers the resolutions we chose on our
+# realm. Nothing here is committed to the fork's main: it is a build recipe.
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: 'Allowlist variant (v1 = widescreen only, v2 = widescreen + 800x600 fallback)'
+        required: true
+        default: v1
+        type: choice
+        options: [v1, v2]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get the official SGD2FreeRes source
+        uses: actions/checkout@v4
+        with:
+          repository: mir-diablo-ii-tools/SlashGaming-Diablo-II-Free-Resolution
+          ref: 3.0.3.1
+          path: sgd2
+          submodules: recursive
+
+      - name: Install NASM
+        shell: pwsh
+        run: |
+          choco install nasm -y --no-progress
+          "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Insert the D2Latam allowlist entry
+        shell: pwsh
+        run: |
+          python .latam/apply_allowlist.py "sgd2/SlashGaming-Diablo-II-Free-Resolution/src/helper/game_resolution.cc" "${{ inputs.variant }}"
+
+      - name: Build SGD2FreeRes (Win32, Release)
+        shell: pwsh
+        run: |
+          cmake -S sgd2 -B sgd2/build -A Win32 -DCMAKE_BUILD_TYPE=Release
+          if ($LASTEXITCODE -ne 0) { throw "configure failed" }
+          cmake --build sgd2/build --config Release --parallel
+          if ($LASTEXITCODE -ne 0) { throw "build failed" }
+
+      - name: Patch the config file name and stage the DLL
+        shell: pwsh
+        run: |
+          $dll = Get-ChildItem -Recurse sgd2/build -Filter SGD2FreeRes.dll |
+            Where-Object { $_.FullName -notmatch 'CMakeFiles' } |
+            Select-Object -First 1
+          if (-not $dll) { throw "SGD2FreeRes.dll not found in sgd2/build" }
+          Write-Host "built: $($dll.FullName) ($($dll.Length) bytes)"
+          New-Item -ItemType Directory -Force thirdparty/sgd2freeres | Out-Null
+          python .latam/patch_config_filename.py $dll.FullName thirdparty/sgd2freeres/sgd2freeres.dll
+          if ($LASTEXITCODE -ne 0) { throw "config filename patch failed" }
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x86
+
+      # pack_lzma must be 32-bit and unoptimised: PocketLzma shifts a 32-bit value
+      # by up to 56 bits, which a 64-bit or optimised build reads wrongly.
+      - name: Build pack_lzma (32-bit)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
+          cl /nologo /EHsc /std:c++17 /O0 /D_CRT_SECURE_NO_WARNINGS tools/pack_lzma.cpp /Fe:build/pack_lzma.exe
+          if ($LASTEXITCODE -ne 0) { throw "pack_lzma build failed" }
+
+      - name: Pack the resource and prove it round-trips
+        shell: pwsh
+        run: |
+          build/pack_lzma.exe thirdparty/sgd2freeres/sgd2freeres.dll thirdparty/sgd2freeres/sgd2freeres.dll.lzma
+          if ($LASTEXITCODE -ne 0) { throw "packing failed" }
+          build/pack_lzma.exe -d thirdparty/sgd2freeres/sgd2freeres.dll.lzma build/roundtrip.dll
+          if ($LASTEXITCODE -ne 0) { throw "unpacking failed" }
+          $a = (Get-FileHash thirdparty/sgd2freeres/sgd2freeres.dll -Algorithm SHA256).Hash
+          $b = (Get-FileHash build/roundtrip.dll -Algorithm SHA256).Hash
+          Write-Host "dll $a"
+          if ($a -ne $b) { throw "pack_lzma round-trip mismatch" }
+
+      - uses: microsoft/setup-msbuild@v2
+
+      - name: Build D2DX with our DLL embedded
+        shell: pwsh
+        run: |
+          msbuild src/d2dx/d2dx.vcxproj /m /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v143 /p:PostBuildEventUseInBuild=false
+          if ($LASTEXITCODE -ne 0) { throw "D2DX build failed" }
+
+      - name: Report what we built
+        shell: pwsh
+        run: |
+          $dll = "src/d2dx/Release/glide3x.dll"
+          if (-not (Test-Path $dll)) { throw "glide3x.dll not produced" }
+          $info = (Get-Item $dll).VersionInfo
+          Write-Host "glide3x.dll $((Get-Item $dll).Length) bytes, FileVersion=$($info.FileVersion)"
+          Write-Host "sha256 $((Get-FileHash $dll -Algorithm SHA256).Hash)"
+          Write-Host "embedded dll sha256 $((Get-FileHash thirdparty/sgd2freeres/sgd2freeres.dll -Algorithm SHA256).Hash)"
+          Write-Host "variant ${{ inputs.variant }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: glide3x-latam-${{ inputs.variant }}
+          path: |
+            src/d2dx/Release/glide3x.dll
+            thirdparty/sgd2freeres/sgd2freeres.dll
+          if-no-files-found: error
