@@ -41,10 +41,6 @@ jobs:
           # disk and rc.exe rejects it as "not in 3.00 format", failing the
           # build at the resource step after every C++ file compiled fine.
           lfs: true
-          # The project keeps its .ico in Git LFS (*.ico filter=lfs), and a
-          # checkout without LFS hands the resource compiler the 130-byte
-          # pointer instead of the icon: RC2175 "not in 3.00 format".
-          lfs: true
 
       - name: Install NASM
         shell: pwsh
