@@ -82,6 +82,11 @@ bool WriteConfig(
     DWORD bytesWritten = 0;
     bool succeeded = true;
 
+    // Not consumed any more: the ingame list is the realm's allowlist, not the
+    // window size. Kept in the signature so BuiltinMods.h and the caller stay
+    // as they are.
+    (void)gameSize;
+
     file = CreateFileA("d2dx_sgd2freeres.json", GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (!file)
     {
@@ -102,9 +107,14 @@ bool WriteConfig(
         "           \"Minor Version B\" : 0\r\n"
         "       },\r\n"
         "       \"Ingame Resolutions\": [\r\n"
-        "           \"640x480\",\r\n"
-        "           \"800x600\",\r\n"
-        "           \"%ix%i\"\r\n"
+        // The resolutions this realm allows, not the engine's 4:3 modes plus
+        // whatever the window happens to be: online the per-IP allowlist decides
+        // (1068x600 and 1344x700), and offline this generated config is read
+        // instead, so the two must agree or the client offers a mode the realm
+        // will refuse. The menu keeps its own field below: the front-end CELs
+        // are 640x480/800x600 art and a widescreen mode there renders black.
+        "           \"1068x600\",\r\n"
+        "           \"1344x700\"\r\n"
         "       ],\r\n"
         "       \"Ingame Resolution Mode\" : 2,\r\n"
         "       \"Main Menu Resolution\" : \"800x600\",\r\n"
@@ -116,8 +126,7 @@ bool WriteConfig(
         "   \"!!!Globals!!!\": {\r\n"
         "       \"Config Tab Width\": 4\r\n"
         "   }\r\n"
-        "}\r\n",
-        gameSize.width, gameSize.height);
+        "}\r\n");
 
     if (!WriteFile(file, configStr, strlen(configStr), &bytesWritten, nullptr))
     {
