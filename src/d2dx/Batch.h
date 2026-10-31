@@ -41,14 +41,20 @@ namespace d2dx
 
 		inline int32_t GetPaletteIndex() const noexcept
 		{
-			return (int32_t)((_isChromaKeyEnabled_textureAtlas_paletteIndex & PALETTE_INDEX_MASK) >> PALETTE_INDEX_SHIFT);
+			/* Four bits here plus the high bit kept in the combiners byte: the
+			   banner's palettes sit at 16 and 17, above the white (14) and logo
+			   (15) ones. See Vertex and GameVS.hlsl. */
+			return (int32_t)(((_isChromaKeyEnabled_textureAtlas_paletteIndex & PALETTE_INDEX_MASK) >> PALETTE_INDEX_SHIFT)
+				| ((_filterMode_primitiveType_combiners & PALETTE_HIGH_BIT_MASK) ? 0x10 : 0));
 		}
 
 		inline void SetPaletteIndex(int32_t paletteIndex) noexcept
 		{
-			assert(paletteIndex >= 0 && paletteIndex < 16);
+			assert(paletteIndex >= 0 && paletteIndex < 32);
 			_isChromaKeyEnabled_textureAtlas_paletteIndex &= ~PALETTE_INDEX_MASK;
-			_isChromaKeyEnabled_textureAtlas_paletteIndex |= (paletteIndex << PALETTE_INDEX_SHIFT);
+			_isChromaKeyEnabled_textureAtlas_paletteIndex |= ((paletteIndex & 0xF) << PALETTE_INDEX_SHIFT);
+			_filterMode_primitiveType_combiners &= ~PALETTE_HIGH_BIT_MASK;
+			_filterMode_primitiveType_combiners |= (paletteIndex & 0x10) ? PALETTE_HIGH_BIT_MASK : 0;
 		}
 
 		inline bool IsChromaKeyEnabled() const noexcept
@@ -269,6 +275,9 @@ namespace d2dx
 		static const uint8_t ALPHA_BLEND_MASK    = 0b00000011;
 		static const uint8_t CHROMAKEY_MASK      = 0b10000000;
 		static const uint8_t TEXTURE_ATLAS_MASK  = 0b01110000;
+		/* The high bit of the palette index rides in a spare bit of the combiners
+		   byte (0x20 was unused: filter 0x10, primitive 0x0C, alpha 0x02, rgb 0x01). */
+		static const uint8_t PALETTE_HIGH_BIT_MASK = 0b00100000;
 		static const uint8_t PALETTE_INDEX_MASK  = 0b00001111;
 		static const uint8_t FILTER_MODE_MASK    = 0b00010000;
 		static const uint8_t PRIMITIVE_TYPE_MASK = 0b00001100;

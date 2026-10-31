@@ -49,12 +49,21 @@ namespace d2dx
 			_s(s),
 			_t(t),
 			_color(color),
-			_isChromaKeyEnabled_surfaceId((isChromaKeyEnabled ? 0x4000 : 0) | (surfaceId & 16383)),
-			_paletteIndex_atlasIndex((paletteIndex << 12) | (atlasIndex & 4095))
+			/* Palette indices 0..15 live in bits 12..15 of the first word; the fifth
+			   bit (16..31) travels in bit 15 of the second word, which is what
+			   GameVS.hlsl decodes. Only 18 slices exist, but the banner's two are
+			   16 and 17 - above the white and logo palettes - so the index needs
+			   that one extra bit. */
+			_isChromaKeyEnabled_surfaceId(
+				(isChromaKeyEnabled ? 0x4000 : 0)
+				| (surfaceId & 16383)
+				| ((paletteIndex & 0x10) ? 0x8000 : 0)),
+			_paletteIndex_atlasIndex(((paletteIndex & 0xF) << 12) | (atlasIndex & 4095))
 		{
 			assert(s >= INT16_MIN && s <= INT16_MAX);
 			assert(t >= INT16_MIN && t <= INT16_MAX);
-			assert(paletteIndex >= 0 && paletteIndex < D2DX_MAX_PALETTES);
+			assert(paletteIndex >= 0 && paletteIndex < 32);
+			assert(paletteIndex < D2DX_MAX_PALETTES);
 			assert(atlasIndex >= 0 && atlasIndex <= 4095);
 			assert(surfaceId >= 0 && surfaceId <= 16383);
 		}
