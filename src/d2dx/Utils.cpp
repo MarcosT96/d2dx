@@ -291,40 +291,97 @@ bool d2dx::DecompressLZMAToFile(
     uint32_t dataSize,
     const char* filename)
 {
-    bool succeeded = true;
     plz::PocketLzma p;
     std::vector<uint8_t> decompressed;
-    HANDLE file = nullptr;
-    DWORD bytesWritten = 0;
 
     auto status = p.decompress(data, dataSize, decompressed);
 
     if (status != plz::StatusCode::Ok)
     {
-        succeeded = false;
-        goto end;
+        return false;
     }
 
-    file = CreateFileA(filename, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (!file)
-    {
-        succeeded = false;
-        goto end;
-    }
+    return WriteFileIfDifferent(decompressed.data(), (uint32_t)decompressed.size(), filename);
+}
 
-    if (!WriteFile(file, decompressed.data(), decompressed.size(), &bytesWritten, nullptr))
-    {
-        succeeded = false;
-        goto end;
-    }
+bool d2dx::WriteFileIfDifferent(
+    const uint8_t* data,
+    uint32_t dataSize,
+    const char* filename)
+{
+    HANDLE file = nullptr;
 
-end:
-    if (file)
+    // Already there with the right content: do not touch it. This is the normal
+    // case for every client after the first one, and not opening the file for
+    // writing at all is what keeps us out of the way of the client that already
+    // has it open (a loaded DLL, an MPQ held by SGD2FreeRes).
+    file = CreateFileA(
+        filename,
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL);
+
+    if (file != INVALID_HANDLE_VALUE)
     {
+        LARGE_INTEGER existingSize = {};
+        bool isSame = GetFileSizeEx(file, &existingSize) != 0
+            && existingSize.QuadPart == dataSize;
+
+        if (isSame && dataSize > 0)
+        {
+            std::vector<uint8_t> existing(dataSize);
+            DWORD bytesRead = 0;
+            isSame = ReadFile(file, existing.data(), dataSize, &bytesRead, nullptr) != 0
+                && bytesRead == dataSize
+                && memcmp(existing.data(), data, dataSize) == 0;
+        }
+
         CloseHandle(file);
+
+        if (isSame)
+        {
+            return true;
+        }
     }
 
-    return succeeded;
+    char tempFilename[MAX_PATH] = {};
+    if (sprintf_s(tempFilename, "%s.tmp", filename) < 0)
+    {
+        return false;
+    }
+
+    file = CreateFileA(tempFilename, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (file == INVALID_HANDLE_VALUE)
+    {
+        return false;
+    }
+
+    DWORD bytesWritten = 0;
+    bool succeeded = WriteFile(file, data, dataSize, &bytesWritten, nullptr) != 0
+        && bytesWritten == dataSize;
+
+    CloseHandle(file);
+
+    if (!succeeded)
+    {
+        DeleteFileA(tempFilename);
+        return false;
+    }
+
+    if (!MoveFileExA(tempFilename, filename, MOVEFILE_REPLACE_EXISTING))
+    {
+        // A process that has the target mapped (the DLL, or the MPQ) can still
+        // refuse the rename. The file already on disk holds the same bytes, so
+        // this is not worth failing the mod over - but say so in the log.
+        D2DX_LOG("Could not replace %s (error %i).", filename, (int32_t)GetLastError());
+        DeleteFileA(tempFilename);
+        return false;
+    }
+
+    return true;
 }
 
 _Use_decl_annotations_

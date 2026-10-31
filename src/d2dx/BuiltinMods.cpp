@@ -78,21 +78,10 @@ end:
 bool WriteConfig(
     _In_ Size gameSize)
 {
-    HANDLE file = nullptr;
-    DWORD bytesWritten = 0;
-    bool succeeded = true;
-
     // Not consumed any more: the ingame list is the realm's allowlist, not the
     // window size. Kept in the signature so BuiltinMods.h and the caller stay
     // as they are.
     (void)gameSize;
-
-    file = CreateFileA("d2dx_sgd2freeres.json", GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (!file)
-    {
-        succeeded = false;
-        goto end;
-    }
 
     char configStr[1024];
 
@@ -128,19 +117,13 @@ bool WriteConfig(
         "   }\r\n"
         "}\r\n");
 
-    if (!WriteFile(file, configStr, strlen(configStr), &bytesWritten, nullptr))
-    {
-        succeeded = false;
-        goto end;
-    }
-
-end:
-    if (file)
-    {
-        CloseHandle(file);
-    }
-
-    return succeeded;
+    // Atomic and idempotent: another client may be reading this file right now
+    // (SGD2FreeRes reads it lazily, on the first resolution-list query), and its
+    // reader latches a failure forever. See WriteFileIfDifferent.
+    return WriteFileIfDifferent(
+        (const uint8_t*)configStr,
+        (uint32_t)strlen(configStr),
+        "d2dx_sgd2freeres.json");
 }
 #endif
 
@@ -170,7 +153,7 @@ void BuiltinMods::Init(
         if (!WriteResourceToFile(hModule, IDR_SGD2FR_DLL, "dll", "d2dx_sgd2freeres.dll"))
         {
             options.SetFlag(OptionsFlag::NoResMod, true);
-            D2DX_LOG("Failed to write d2dx_sgd2freeres.mpq");
+            D2DX_LOG("Failed to write d2dx_sgd2freeres.dll");
             goto LOAD_FPS;
         }
 

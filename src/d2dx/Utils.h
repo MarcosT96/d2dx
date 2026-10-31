@@ -77,6 +77,25 @@ namespace d2dx
 		_In_ uint32_t dataSize,
 		_In_z_ const char* filename);
 
+	/**
+		Writes the file only when its content differs from `data`.
+
+		Every running client shares the game directory, so the naive
+		CREATE_ALWAYS + write is a data race with the other instances:
+		WriteConfig opens d2dx_sgd2freeres.json with a share mode of 0, and a
+		second client whose SGD2FreeRes reads the file inside that window gets a
+		sharing violation - which its static config reader latches forever,
+		leaving that client on the default 640x480/800x600 list.
+
+		Writing through a temporary file and renaming it makes the replacement
+		atomic (readers see the old or the new content, never a truncated file),
+		and an up to date file is not opened for writing at all.
+	*/
+	bool WriteFileIfDifferent(
+		_In_reads_(dataSize) const uint8_t* data,
+		_In_ uint32_t dataSize,
+		_In_z_ const char* filename);
+
 	int32_t IndexOfUInt64(
 		_In_reads_(itemsCount) const uint64_t* __restrict items,
 		_In_ uint32_t itemsCount,
