@@ -65,7 +65,8 @@ namespace d2dx
 			_In_reads_(width * height) const uint8_t* sourceAddress,
 			_In_ uint32_t startAddress,
 			_In_ int32_t width,
-			_In_ int32_t height);
+			_In_ int32_t height,
+			_In_ int32_t format);
 		
 		virtual void OnTexSource(
 			_In_ uint32_t tmu,
@@ -225,6 +226,37 @@ namespace d2dx
 
 		void FillVertexSurfaceId(
 			_In_ const Batch& batch);
+
+
+		/* The Smacker frame arrives as two RGB565 textures - the client splits
+		   each 512-wide row into two 256-wide halves (gTexInfoBlocks0Glide and
+		   Blocks1Glide) - so each needs its own palette and lookup table.
+		   Sharing one made half the banner render with the other half's
+		   palette. The game's own palettes occupy 0..D2DX_MAX_GAME_PALETTES-1,
+		   so the top slots are free. */
+		static constexpr int32_t Rgb565SlotCount = 2;
+		static constexpr int32_t Rgb565FirstPaletteIndex = D2DX_MAX_PALETTES - Rgb565SlotCount;
+
+		struct Rgb565Slot
+		{
+			uint32_t startAddress{ 0 };
+			uint32_t size{ 0 };
+			uint64_t hash{ ~0ull };
+			bool used{ false };
+			std::array<uint8_t, 32768> lut{};
+		};
+
+		bool ConvertRgb565ToIndexed(
+			_In_ const uint8_t* sourceAddress,
+			_In_ uint32_t startAddress,
+			_In_ int32_t width,
+			_In_ int32_t height);
+
+		int32_t FindRgb565Slot(_In_ uint32_t startAddress) const;
+
+		int32_t _gamePaletteSlot{ 0 };
+		std::array<Rgb565Slot, Rgb565SlotCount> _rgb565Slots{};
+		std::array<uint32_t, 32768> _rgb565Histogram{};
 
 		Offset GameToWinCursorPos(
 			_In_ Offset pos);

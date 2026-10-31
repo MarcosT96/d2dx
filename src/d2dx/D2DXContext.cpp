@@ -17,6 +17,7 @@
 	along with D2DX.  If not, see <https://www.gnu.org/licenses/>.
 */
 #include "pch.h"
+#include <algorithm>
 #include "D2DXContext.h"
 #include "D2DXContextFactory.h"
 #include "Detours.h"
@@ -248,7 +249,8 @@ void D2DXContext::OnTexDownload(
 	const uint8_t* sourceAddress,
 	uint32_t startAddress,
 	int32_t width,
-	int32_t height)
+	int32_t height,
+	int32_t format)
 {
 	Timer _timer(ProfCategory::TextureDownload);
 	assert(tmu == 0 && (startAddress & 255) == 0);
@@ -259,12 +261,289 @@ void D2DXContext::OnTexDownload(
 
 	_textureHasher.Invalidate(startAddress);
 
+	/* GR_TEXFMT_RGB_565. The only such upload in the game is the Smacker
+	   banner ad - see ConvertRgb565ToIndexed. */
+	if (format == 0xa && width > 0 && height > 0 &&
+		width * height <= (int32_t)_rgb565Histogram.size())
+	{
+		if (ConvertRgb565ToIndexed(sourceAddress, startAddress, width, height))
+		{
+			return;
+		}
+		/* No slot free: fall through to the plain copy. The texture will look
+		   wrong, but nothing else is affected. */
+	}
+
+	/* A normal paletted upload landing on a banner range means the address has
+	   been reused, so give the slot back. */
+	for (int32_t i = 0; i < Rgb565SlotCount; ++i)
+	{
+		if (_rgb565Slots[i].used &&
+			startAddress >= _rgb565Slots[i].startAddress &&
+			startAddress < _rgb565Slots[i].startAddress + _rgb565Slots[i].size)
+		{
+			_rgb565Slots[i] = Rgb565Slot{};
+		}
+	}
+
 	uint32_t memRequired = (uint32_t)(width * height);
 
 	auto pStart = _glideState.tmuMemory.items + startAddress;
 	auto pEnd = _glideState.tmuMemory.items + startAddress + memRequired;
 	assert(pEnd <= (_glideState.tmuMemory.items + _glideState.tmuMemory.capacity));
 	memcpy_s(pStart, _glideState.tmuMemory.capacity - startAddress, sourceAddress, memRequired);
+}
+
+bool D2DXContext::ConvertRgb565ToIndexed(
+	const uint8_t* source,
+	uint32_t startAddress,
+	int32_t width,
+	int32_t height)
+{
+	const int32_t pixelCount = width * height;
+	const uint32_t byteCount = (uint32_t)pixelCount;
+
+	int32_t slotIndex = FindRgb565Slot(startAddress);
+	if (slotIndex < 0)
+	{
+		for (int32_t i = 0; i < Rgb565SlotCount; ++i)
+		{
+			if (!_rgb565Slots[i].used)
+			{
+				slotIndex = i;
+				_rgb565Slots[i] = Rgb565Slot{};
+				_rgb565Slots[i].used = true;
+				_rgb565Slots[i].startAddress = startAddress;
+				_rgb565Slots[i].size = byteCount;
+				break;
+			}
+		}
+	}
+	if (slotIndex < 0)
+	{
+		return false;
+	}
+
+	Rgb565Slot& slot = _rgb565Slots[slotIndex];
+	slot.startAddress = startAddress;
+	slot.size = byteCount;
+
+	const uint64_t hash = XXH3_64bits(source, (size_t)pixelCount * 2);
+	if (hash != slot.hash)
+	{
+		slot.hash = hash;
+		_rgb565Histogram.fill(0);
+
+		auto pixelOf = [&](int32_t i) {
+			return (uint16_t)(source[i * 2] | (source[i * 2 + 1] << 8));
+		};
+
+		/* Histogram in 5-5-5: fine enough to keep bands out of the dark end,
+		   small enough that the median cut below is instant. */
+		for (int32_t i = 0; i < pixelCount; ++i)
+		{
+			const uint16_t pixel = pixelOf(i);
+			const uint32_t r = (pixel >> 11) & 0x1f;
+			const uint32_t g = (pixel >> 6) & 0x1f;
+			const uint32_t b = pixel & 0x1f;
+			_rgb565Histogram[(r << 10) | (g << 5) | b]++;
+		}
+
+		struct Box
+		{
+			uint32_t begin;
+			uint32_t end;
+			uint32_t population;
+			uint8_t widest;
+			uint32_t extent;
+		};
+
+		std::array<uint16_t, 32768> keys{};
+		int32_t keyCount = 0;
+		for (uint32_t i = 0; i < 32768; ++i)
+		{
+			if (_rgb565Histogram[i] != 0)
+			{
+				keys[keyCount++] = (uint16_t)i;
+			}
+		}
+
+		auto keyChannel = [](uint16_t k, int32_t c) -> uint32_t {
+			return c == 0 ? ((k >> 10) & 0x1f) : (c == 1 ? ((k >> 5) & 0x1f) : (k & 0x1f));
+		};
+
+		auto measure = [&](Box& box) {
+			uint32_t lo[3] = { 31, 31, 31 };
+			uint32_t hi[3] = { 0, 0, 0 };
+			box.population = 0;
+			for (uint32_t i = box.begin; i < box.end; ++i)
+			{
+				const uint16_t k = keys[i];
+				for (int32_t c = 0; c < 3; ++c)
+				{
+					const uint32_t v = keyChannel(k, c);
+					lo[c] = min(lo[c], v);
+					hi[c] = max(hi[c], v);
+				}
+				box.population += _rgb565Histogram[k];
+			}
+			box.widest = 0;
+			box.extent = 0;
+			for (int32_t c = 0; c < 3; ++c)
+			{
+				const uint32_t e = hi[c] - lo[c];
+				if (e > box.extent)
+				{
+					box.extent = e;
+					box.widest = (uint8_t)c;
+				}
+			}
+		};
+
+		std::array<Box, 256> boxes{};
+		int32_t boxCount = 0;
+		if (keyCount > 0)
+		{
+			boxes[0] = Box{ 0, (uint32_t)keyCount, 0, 0, 0 };
+			measure(boxes[0]);
+			boxCount = 1;
+
+			while (boxCount < 256)
+			{
+				int32_t pick = -1;
+				uint32_t best = 0;
+				for (int32_t i = 0; i < boxCount; ++i)
+				{
+					if (boxes[i].end - boxes[i].begin > 1 && boxes[i].extent != 0)
+					{
+						const uint32_t score = boxes[i].extent * boxes[i].population;
+						if (score > best)
+						{
+							best = score;
+							pick = i;
+						}
+					}
+				}
+				if (pick < 0)
+				{
+					break;
+				}
+
+				Box& box = boxes[pick];
+				const int32_t channel = box.widest;
+				std::sort(keys.begin() + box.begin, keys.begin() + box.end,
+					[&](uint16_t a, uint16_t b) {
+						return keyChannel(a, channel) < keyChannel(b, channel);
+					});
+
+				const uint32_t half = box.population / 2;
+				uint32_t running = 0;
+				uint32_t split = box.end - 1;
+				for (uint32_t i = box.begin; i < box.end; ++i)
+				{
+					running += _rgb565Histogram[keys[i]];
+					if (running >= half && i > box.begin)
+					{
+						split = i;
+						break;
+					}
+				}
+				if (split <= box.begin)
+				{
+					split = box.begin + 1;
+				}
+
+				Box second = Box{ split, box.end, 0, 0, 0 };
+				box.end = split;
+				measure(box);
+				measure(second);
+				boxes[boxCount++] = second;
+			}
+		}
+
+		uint32_t palette[256] = {};
+		for (int32_t i = 0; i < 256; ++i)
+		{
+			if (i >= boxCount)
+			{
+				continue;
+			}
+			uint64_t sum[3] = { 0, 0, 0 };
+			uint32_t total = 0;
+			for (uint32_t k = boxes[i].begin; k < boxes[i].end; ++k)
+			{
+				const uint16_t key = keys[k];
+				const uint32_t n = _rgb565Histogram[key];
+				sum[0] += (uint64_t)n * keyChannel(key, 0);
+				sum[1] += (uint64_t)n * keyChannel(key, 1);
+				sum[2] += (uint64_t)n * keyChannel(key, 2);
+				total += n;
+			}
+			if (total != 0)
+			{
+				const uint32_t r = (uint32_t)(sum[0] / total);
+				const uint32_t g = (uint32_t)(sum[1] / total);
+				const uint32_t b = (uint32_t)(sum[2] / total);
+				palette[i] = 0xff000000u | (((r * 255 + 15) / 31) << 16) |
+					(((g * 255 + 15) / 31) << 8) | ((b * 255 + 15) / 31);
+			}
+		}
+
+		/* Nearest-entry lookup for every 5-5-5 bucket, so converting a frame
+		   costs one array read per pixel. */
+		for (uint32_t key = 0; key < 32768; ++key)
+		{
+			const int32_t r = (int32_t)((key >> 10) & 0x1f) * 255 / 31;
+			const int32_t g = (int32_t)((key >> 5) & 0x1f) * 255 / 31;
+			const int32_t b = (int32_t)(key & 0x1f) * 255 / 31;
+			int32_t bestIndex = 0;
+			int64_t bestDistance = INT64_MAX;
+			for (int32_t i = 0; i < 256; ++i)
+			{
+				const int32_t pr = (int32_t)((palette[i] >> 16) & 0xff);
+				const int32_t pg = (int32_t)((palette[i] >> 8) & 0xff);
+				const int32_t pb = (int32_t)(palette[i] & 0xff);
+				const int64_t distance = (int64_t)(pr - r) * (pr - r) +
+					(int64_t)(pg - g) * (pg - g) + (int64_t)(pb - b) * (pb - b);
+				if (distance < bestDistance)
+				{
+					bestDistance = distance;
+					bestIndex = i;
+				}
+			}
+			slot.lut[key] = (uint8_t)bestIndex;
+		}
+
+		_renderContext->SetPalette(Rgb565FirstPaletteIndex + slotIndex, palette);
+	}
+
+	auto pStart = _glideState.tmuMemory.items + startAddress;
+	assert(_glideState.tmuMemory.capacity >= startAddress + byteCount);
+	for (int32_t i = 0; i < pixelCount; ++i)
+	{
+		const uint16_t pixel = (uint16_t)(source[i * 2] | (source[i * 2 + 1] << 8));
+		const uint32_t r = (pixel >> 11) & 0x1f;
+		const uint32_t g = (pixel >> 6) & 0x1f;
+		const uint32_t b = pixel & 0x1f;
+		pStart[i] = slot.lut[(r << 10) | (g << 5) | b];
+	}
+
+	return true;
+}
+
+int32_t D2DXContext::FindRgb565Slot(
+	uint32_t startAddress) const
+{
+	for (int32_t i = 0; i < Rgb565SlotCount; ++i)
+	{
+		if (_rgb565Slots[i].used &&
+			startAddress >= _rgb565Slots[i].startAddress &&
+			startAddress < _rgb565Slots[i].startAddress + _rgb565Slots[i].size)
+		{
+			return i;
+		}
+	}
+	return -1;
 }
 
 _Use_decl_annotations_
@@ -305,6 +584,16 @@ void D2DXContext::OnTexSource(
 	_scratchBatch.SetTextureStartAddress(startAddress);
 	_scratchBatch.SetTextureHash(hash);
 	_scratchBatch.SetTextureSize(width, height);
+
+	/* The banner ad was converted from RGB565 against its own palette, so that
+	   draw must use that palette; everything else must go back to whatever the
+	   game last bound. Setting it only for the banner is not enough - the batch
+	   carries the value forward, and the whole UI would be tinted by the
+	   banner's palette. */
+	const int32_t bannerSlot = FindRgb565Slot(startAddress);
+	_scratchBatch.SetPaletteIndex(bannerSlot >= 0
+		? Rgb565FirstPaletteIndex + bannerSlot
+		: _gamePaletteSlot);
 
 	if (_options.GetFlag(OptionsFlag::DbgDumpTextures))
 	{
@@ -856,6 +1145,7 @@ void D2DXContext::OnTexDownloadTable(
 		if (_paletteKeys.items[i] == hash)
 		{
 			_scratchBatch.SetPaletteIndex(i);
+			_gamePaletteSlot = (int32_t)i;
 			return;
 		}
 	}
@@ -866,6 +1156,7 @@ void D2DXContext::OnTexDownloadTable(
 		{
 			_paletteKeys.items[i] = hash;
 			_scratchBatch.SetPaletteIndex(i);
+			_gamePaletteSlot = (int32_t)i;
 
 			uint32_t* palette = (uint32_t*)data;
 

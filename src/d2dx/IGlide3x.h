@@ -48,7 +48,8 @@ namespace d2dx
 			_In_reads_(width* height) const uint8_t* sourceAddress,
 			_In_ uint32_t startAddress,
 			_In_ int32_t width,
-			_In_ int32_t height) = 0;
+			_In_ int32_t height,
+			_In_ int32_t format) = 0;
 
 		virtual void OnTexSource(
 			_In_ uint32_t tmu,

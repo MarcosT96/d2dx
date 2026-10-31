@@ -438,7 +438,7 @@ FX_ENTRY void FX_CALL
 
 	try
 	{
-		D2DXContextFactory::GetInstance()->OnTexDownload(tmu, (const uint8_t*)info->data, startAddress, (int32_t)width, (int32_t)height);
+		D2DXContextFactory::GetInstance()->OnTexDownload(tmu, (const uint8_t*)info->data, startAddress, (int32_t)width, (int32_t)height, (int32_t)info->format);
 	}
 	catch (...)
 	{
