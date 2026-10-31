@@ -237,6 +237,13 @@ namespace d2dx
 		static constexpr int32_t Rgb565SlotCount = 2;
 		static constexpr int32_t Rgb565FirstPaletteIndex = D2DX_MAX_PALETTES - Rgb565SlotCount;
 
+		/* The banner's half-palettes must not land on the white palette (every
+		   untextured draw goes through it) or on the logo's. They did once and
+		   every line in the game came out resolved against the banner. */
+		static_assert(
+			Rgb565FirstPaletteIndex > D2DX_LOGO_PALETTE_INDEX,
+			"the RGB565 slots overlap the white and logo palettes");
+
 		struct Rgb565Slot
 		{
 			uint32_t startAddress{ 0 };

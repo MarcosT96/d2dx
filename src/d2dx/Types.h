@@ -27,7 +27,13 @@
 #define D2DX_MAX_GAME_PALETTES 14
 #define D2DX_WHITE_PALETTE_INDEX 14
 #define D2DX_LOGO_PALETTE_INDEX 15
-#define D2DX_MAX_PALETTES 16
+/* 14 is the all-white palette every untextured draw is resolved through (lines,
+   rectangles - see OnDrawLine) and 15 is the D2DX logo; the RGB565 banner slots
+   are allocated from the top, so the table has to leave room for all four:
+   14 game palettes + white + logo + the banner's two halves. With 16 the banner
+   landed on 14 and 15 and every line in the game - BH's automap markers above
+   all - started resolving its palette index against the banner's palette. */
+#define D2DX_MAX_PALETTES 18
 
 #define D2DX_SURFACE_UI 0
 #define D2DX_SURFACE_CURSOR 1
